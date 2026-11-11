@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>اختر وجهتك</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: blueprint sheet. Map is the hero, chooser above it, walking steps below. Phone first. */
+:root{
+  --paper:#eef3fa; --surface:#ffffff; --ink:#12233d; --muted:#586a84;
+  --line:#2a5ca6; --room:#e3ecf8; --route:#e2560a; --route-soft:#ffe1cc; --alert:#c62828;
+  --display:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
+  --body:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0c1524; --surface:#142136; --ink:#e7eef9; --muted:#9db0cb;
+    --line:#82b2f2; --room:#1b2d4a; --route:#ff9548; --route-soft:#5a3115; --alert:#ff8a80;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0c1524; --surface:#142136; --ink:#e7eef9; --muted:#9db0cb;
+  --line:#82b2f2; --room:#1b2d4a; --route:#ff9548; --route-soft:#5a3115; --alert:#ff8a80;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6}
+.wrap{max-width:860px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--line);padding-bottom:10px}
+h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.2;margin:0;text-wrap:balance}
+.college{color:var(--muted);font-size:14px;margin:0}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--line);color:var(--surface);font-weight:600}
+h2{font-size:15px;font-weight:600;color:var(--muted);margin:0 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.dest{font:inherit;font-weight:500;text-align:right;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:48px;justify-content:center}
+.dest small{font-weight:400;font-size:12px;color:var(--muted)}
+.dest[aria-pressed="true"]{background:var(--route);border-color:var(--route);color:#fff}
+.dest[aria-pressed="true"] small{color:#fff}
+.dest:disabled{border-style:dashed;border-color:var(--muted);color:var(--muted);cursor:not-allowed}
+.dest.more::after{content:"‹";position:absolute;inset-inline-end:12px;font-size:20px;transition:transform .2s}
+.dest.more{position:relative}
+.dest.more[aria-expanded="true"]::after{transform:rotate(-90deg)}
+button:focus-visible{outline:3px solid var(--route);outline-offset:2px}
+#halls{border:1.5px solid var(--line);border-radius:8px;padding:12px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
+#halls[hidden]{display:none}
+.hallrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hallrow span{font-size:13px;color:var(--muted);min-width:84px}
+.hallrow .dest{min-width:52px;min-height:44px;align-items:center;font-variant-numeric:tabular-nums;font-weight:600}
+.mapbox{position:relative;background:var(--surface);border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+#map{display:block;width:100%;aspect-ratio:4/3;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+@media (min-width:640px){#map{aspect-ratio:16/10}}
+.zoom{position:absolute;bottom:10px;inset-inline-start:10px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:40px;height:40px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:600 20px var(--body);cursor:pointer}
+.zoom button.fit{font-size:11px}
+.floor{position:absolute;top:10px;inset-inline-end:10px;background:var(--line);color:var(--surface);font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px}
+#guide{background:var(--surface);border:1.5px solid var(--line);border-inline-start:6px solid var(--route);border-radius:8px;padding:14px 16px}
+#guide h3{font-family:var(--display);font-weight:700;font-size:22px;margin:0 0 6px;line-height:1.3}
+#guide ol{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:4px}
+#guide p{margin:0;color:var(--muted)}
+#guide .note{margin-top:8px;font-size:13px}
+footer{color:var(--muted);font-size:12px;text-align:center}
+/* map drawing */
+.floorbg{fill:var(--surface)}
+.room{fill:var(--room);stroke:var(--line);stroke-width:2}
+.room.pick{cursor:pointer}
+.room.on{fill:var(--route-soft);stroke:var(--route);stroke-width:3}
+.stair{fill:none;stroke:var(--line);stroke-width:1}
+.gap{stroke:var(--surface);stroke-width:5}
+.lbl{fill:var(--ink);font-family:var(--body);font-size:14px;text-anchor:middle;pointer-events:none}
+.lbl.s{font-size:9px}
+.lbl.ent{fill:var(--line);font-weight:600;font-size:15px}
+.lbl.exit{fill:var(--alert);font-size:11px;font-weight:600}
+#path{fill:none;stroke:var(--route);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:14 12;animation:march 1s linear infinite}
+@keyframes march{to{stroke-dashoffset:-26}}
+#here circle.p{fill:var(--route);opacity:.3;transform-box:fill-box;transform-origin:center;animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{from{transform:scale(.5);opacity:.5}to{transform:scale(1.6);opacity:0}}
+#here circle.c{fill:var(--route);stroke:var(--surface);stroke-width:3}
+#here text{fill:var(--route);font-weight:600;font-size:14px}
+#pin{fill:var(--route);stroke:var(--surface);stroke-width:2}
+@media (prefers-reduced-motion:reduce){#path,#here circle.p{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>اختر وجهتك</h1>
+      <p class="college">الكلية التقنية بالعارضة</p>
+    </div>
+    <div class="seg" role="group" aria-label="موقعك الآن">
+      <button type="button" id="from1" aria-pressed="true">المدخل الرئيسي ١</button>
+      <button type="button" id="from2" aria-pressed="false">المدخل الرئيسي ٢</button>
+    </div>
+  </header>
+
+  <section>
+    <h2>إلى أين تريد الذهاب؟</h2>
+    <div class="grid" id="main"></div>
+  </section>
+  <div id="halls" hidden></div>
+
+  <div class="mapbox">
+    <svg id="map" role="img" aria-label="مخطط الدور الأرضي"></svg>
+    <span class="floor">الدور الأرضي</span>
+    <div class="zoom">
+      <button type="button" id="zin" aria-label="تكبير">+</button>
+      <button type="button" id="zout" aria-label="تصغير">−</button>
+      <button type="button" id="zfit" class="fit" aria-label="عرض الخريطة كاملة">الكل</button>
+    </div>
+  </div>
+
+  <section id="guide" aria-live="polite"></section>
+
+  <section>
+    <h2>وجهات أخرى في الدور الأرضي</h2>
+    <div class="grid" id="other"></div>
+  </section>
+
+  <footer>الإصدار ٠٫١ · نموذج أولي للدور الأرضي</footer>
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg', CX=778, CY=423.5;
+const FULL={x:206,y:56,w:1144,h:736};
+
+// r: x,y,w,h — d: door x,y + wall direction (h = horizontal wall, v = vertical wall)
+const ROOMS=[
+ {id:'it',  n:'تقنية المعلومات', r:[236,102,210,68], d:[432,170,'h'], pick:1},
+ {id:'data',n:'غرفة البيانات', r:[446,102,78,68], s:1},
+ {id:'vt',  n:'وكيل شؤون المتدربين', l:['وكيل شؤون','المتدربين'], r:[524,102,91,68], d:[590,170,'h'], pick:1, s2:1},
+ {id:'act', n:'صالة الأنشطة والانتظار', l:['صالة الأنشطة والانتظار للمتدربين'], r:[942,102,378,48], poly:'942,102 1320,102 1320,150 1113,150 1113,170 942,170', d:[965,170,'h'], pick:1},
+ {id:'h9',  n:'قاعة تدريب ٩', r:[236,220,210,190], d:[446,245,'v'], pick:1},
+ {id:'h10', n:'قاعة تدريب ١٠', r:[236,410,210,180], d:[446,432,'v'], pick:1},
+ {id:'dev', n:'قاعة التطوير', r:[236,590,210,155], d:[446,614,'v'], pick:1},
+ {id:'q',   n:'وكيل الجودة', r:[446,650,171,95], d:[472,650,'h'], pick:1},
+ {id:'el',  n:'غرفة الكهرباء', l:['كهرباء'], r:[524,240,59,28], s:1},
+ {id:'st1', n:'مستودع', r:[524,268,93,35], s:1},
+ {id:'inv', n:'قاعة الابتكار', l:['قاعة','الابتكار'], r:[524,303,93,165], d:[524,330,'v'], pick:1},
+ {id:'caf', n:'كافتيريا المدربين', l:['كافتيريا'], r:[570,468,47,47], s:1},
+ {id:'wc1', n:'دورة مياه', r:[524,515,93,80], d:[524,555,'v'], pick:1},
+ {id:'reg', n:'القبول والتسجيل', l:['قسم القبول والتسجيل'], r:[583,228,342,75], d:[640,228,'h'], pick:1},
+ {id:'lift',n:'المصعد', r:[925,228,110,34], d:[980,228,'h'], pick:1},
+ {id:'wc2', n:'دورة مياه', r:[925,262,110,58], d:[1035,292,'v'], pick:1},
+ {id:'st2', n:'مستودع', r:[942,320,93,30], s:1},
+ {id:'h21', n:'قاعة تدريب ٢١', l:['قاعة','تدريب ٢١'], r:[942,350,93,165], d:[1035,374,'v'], pick:1},
+ {id:'gd',  n:'التوجيه والإرشاد', l:['التوجيه','والإرشاد'], r:[942,515,93,80], d:[1035,578,'v'], pick:1},
+ {id:'h4',  n:'قاعة تدريب ٤', r:[1113,220,207,190], d:[1113,245,'v'], pick:1},
+ {id:'h3',  n:'قاعة تدريب ٣', r:[1113,410,207,180], d:[1113,432,'v'], pick:1},
+ {id:'tr',  n:'مكاتب المدربين', l:['مكاتب المدربين','قسم الدراسات العامة'], r:[1113,590,207,155], d:[1113,614,'v'], pick:1},
+ {id:'vtr', n:'وكيل شؤون المدربين', r:[942,650,171,95], d:[1090,650,'h'], pick:1}
+];
+const BYID=Object.fromEntries(ROOMS.map(r=>[r.id,r]));
+const STAIR_DOOR=[780,512];
+
+// walkable corridor centre lines
+const NODES={E1:[780,738],L:[780,622],BL:[485,622],BR:[1074,622],TL:[485,199],TR:[1074,199],T:[780,199],E2:[780,110],W:[432,199],S:[780,532]};
+const EDGES=[['E1','L'],['L','BL'],['L','BR'],['BL','TL'],['BR','TR'],['TL','T'],['T','TR'],['T','E2'],['TL','W'],['L','S']];
+
+const MAIN=[
+ {id:'vt', n:'وكالة شؤون المتدربين'},
+ {id:'vtr',n:'وكيل شؤون المدربين'},
+ {n:'المكتبة', wait:1},{n:'العميد', wait:1},
+ {n:'قسم الحاسب الآلي', wait:1},{n:'قسم التقنية الكهربائية', wait:1},{n:'قسم التبريد', wait:1},
+ {id:'dev',n:'قاعة التطوير'},
+ {halls:1, n:'القاعات الدراسية'}
+];
+const HALLS=[
+ {t:'الدور الأرضي', items:[['h3','٣'],['h4','٤'],['h9','٩'],['h10','١٠'],['h21','٢١']]},
+ {t:'الدور الثاني', items:[['up9','٩'],['up10','١٠'],['up11','١١'],['up12','١٢']]}
+];
+const UP={up9:'قاعة ٩ — الدور الثاني',up10:'قاعة ١٠ — الدور الثاني',up11:'قاعة ١١ — الدور الثاني',up12:'قاعة ١٢ — الدور الثاني'};
+const OTHER=['reg','q','it','gd','inv','act','tr','lift','wc1'];
+
+let from='E1', target=null, vb={...FULL}, anim=0;
+const $=id=>document.getElementById(id);
+const svg=$('map');
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+
+/* ---------- draw the plan ---------- */
+const plan=el('g',{id:'plan'});
+el('rect',{x:236,y:102,width:1084,height:643,class:'floorbg'},plan);
+function label(lines,cx,cy,cls){
+  const t=el('text',{class:'lbl '+(cls||''),'data-cx':cx,'data-cy':cy},plan), lh=cls==='s'?11:18;
+  lines.forEach((s,i)=>{const ts=el('tspan',{x:cx,y:cy-(lines.length-1)*lh/2+i*lh+ (cls==='s'?3:5)},t);ts.textContent=s;});
+  return t;
+}
+function stairs(x,y,w,h,vertical){
+  el('rect',{x,y,width:w,height:h,class:'room'},plan);
+  if(vertical){for(let i=x+12;i<x+w;i+=12)el('line',{x1:i,y1:y+8,x2:i,y2:y+h-8,class:'stair'},plan);}
+  else{for(let j=y+14;j<y+h;j+=14)el('line',{x1:x+40,y1:j,x2:x+w-40,y2:j,class:'stair'},plan);}
+}
+stairs(236,170,184,50,true); stairs(1113,150,207,70,true); stairs(617,303,325,207,false);
+el('rect',{x:735,y:390,width:90,height:44,rx:6,class:'floorbg'},plan);
+label(['الدرج الرئيسي'],780,412);
+label(['الدرج'],328,195,'s'); label(['الدرج'],1216,185,'s');
+label(['مخرج الطوارئ ←'],1250,212,'exit');
+for(const r of ROOMS){
+  const [x,y,w,h]=r.r;
+  const shape=r.poly?el('polygon',{points:r.poly},plan):el('rect',{x,y,width:w,height:h},plan);
+  shape.setAttribute('class','room'+(r.pick?' pick':''));
+  shape.dataset.id=r.id; r.el=shape;
+  if(r.d){const [dx,dy,o]=r.d; el('line',o==='h'?{x1:dx-11,y1:dy,x2:dx+11,y2:dy,class:'gap'}:{x1:dx,y1:dy-11,x2:dx,y2:dy+11,class:'gap'},plan);}
+  label(r.l||[r.n],x+w/2,y+h/2,(r.s||r.s2)?'s':'');
+}
+label(['المدخل الرئيسي ١'],780,770,'ent'); label(['المدخل الرئيسي ٢'],780,84,'ent');
+const pathEl=el('polyline',{id:'path',points:''},plan);
+const pin=el('circle',{id:'pin',r:9,cx:-99,cy:-99},plan);
+const here=el('g',{id:'here'},plan);
+el('circle',{class:'p',r:22},here); el('circle',{class:'c',r:9},here);
+const hereT=el('text',{class:'lbl',x:62,y:5,'data-cx':62,'data-cy':0},here); hereT.textContent='أنت هنا';
+
+/* ---------- routing ---------- */
+const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+function project(p,a,b){const vx=b[0]-a[0],vy=b[1]-a[1];let t=((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy);t=Math.max(0,Math.min(1,t));return [a[0]+t*vx,a[1]+t*vy];}
+function route(start,door){
+  const nodes={...NODES}; let best=null;
+  for(const [a,b] of EDGES){const q=project(door,nodes[a],nodes[b]),d=dist(q,door);if(!best||d<best.d)best={a,b,q,d};}
+  nodes.P=best.q;
+  const edges=EDGES.filter(e=>!(e[0]===best.a&&e[1]===best.b)).concat([[best.a,'P'],['P',best.b]]);
+  const D={},prev={},done=new Set(); for(const k in nodes)D[k]=Infinity; D[start]=0;
+  while(true){
+    let u=null; for(const k in nodes)if(!done.has(k)&&(u===null||D[k]<D[u]))u=k;
+    if(u===null||u==='P')break; done.add(u);
+    for(const [a,b] of edges){const v=a===u?b:b===u?a:null;if(!v)continue;const nd=D[u]+dist(nodes[u],nodes[v]);if(nd<D[v]){D[v]=nd;prev[v]=u;}}
+  }
+  let pts=[door],k='P'; while(k){pts.unshift(nodes[k]);k=prev[k];}
+  // drop repeated and collinear points
+  pts=pts.filter((p,i)=>i===0||dist(p,pts[i-1])>1);
+  return pts.filter((p,i)=>{if(i===0||i===pts.length-1)return true;const a=pts[i-1],c=pts[i+1];return Math.abs((p[0]-a[0])*(c[1]-p[1])-(p[1]-a[1])*(c[0]-p[0]))>1;});
+}
+function turn(a,b,c){const x1=b[0]-a[0],y1=b[1]-a[1],x2=c[0]-b[0],y2=c[1]-b[1];const ang=Math.atan2(x1*y2-y1*x2,x1*x2+y1*y2)*180/Math.PI;return Math.abs(ang)<30?0:ang>0?1:-1;}
+function steps(pts,name,upstairs){
+  const out=['ادخل من '+(from==='E1'?'المدخل الرئيسي ١':'المدخل الرئيسي ٢')+' وامشِ للأمام.'];
+  for(let i=1;i<pts.length-1;i++){
+    const t=turn(pts[i-1],pts[i],pts[i+1]);
+    if(i===pts.length-2) out.push(upstairs?'الدرج الرئيسي '+(t===0?'أمامك مباشرة':t>0?'على يمينك':'على يسارك')+'.':'باب «'+name+'» '+(t===0?'أمامك مباشرة':t>0?'على يمينك':'على يسارك')+'.');
+    else if(t!==0) out.push('انعطف '+(t>0?'يميناً':'يساراً')+' واستمر في الممر.');
+  }
+  if(pts.length===2) out.push(upstairs?'الدرج الرئيسي أمامك مباشرة.':'باب «'+name+'» أمامك مباشرة.');
+  if(upstairs) out.push('اصعد الدرج إلى الدور الثاني.');
+  return out;
+}
+
+/* ---------- view ---------- */
+const tf=p=>from==='E2'?[2*CX-p[0],2*CY-p[1]]:p;
+function applyVB(){svg.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);}
+function flyTo(t){
+  cancelAnimationFrame(anim);
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){vb={...t};applyVB();return;}
+  const s={...vb},t0=performance.now();
+  (function f(now){const k=Math.min(1,(now-t0)/450),e=k*(2-k);for(const p of 'xywh')vb[p]=s[p]+(t[p]-s[p])*e;applyVB();if(k<1)anim=requestAnimationFrame(f);})(t0);
+}
+function fitPoints(pts){
+  const q=pts.map(tf),xs=q.map(p=>p[0]),ys=q.map(p=>p[1]);
+  let x=Math.min(...xs)-110,y=Math.min(...ys)-90,w=Math.max(...xs)-x+110,h=Math.max(...ys)-y+90;
+  if(w<460){x-=(460-w)/2;w=460;} if(h<300){y-=(300-h)/2;h=300;}
+  flyTo({x,y,w,h});
+}
+function render(fit){
+  const rot=from==='E2';
+  plan.setAttribute('transform',rot?`rotate(180 ${CX} ${CY})`:'');
+  const s=NODES[from];
+  here.setAttribute('transform',`translate(${s[0]} ${s[1]})`);
+  plan.querySelectorAll('text').forEach(t=>t.setAttribute('transform',rot?`rotate(180 ${t.dataset.cx} ${t.dataset.cy})`:''));
+  $('from1').setAttribute('aria-pressed',from==='E1'); $('from2').setAttribute('aria-pressed',from==='E2');
+  ROOMS.forEach(r=>r.el.classList.toggle('on',r.id===target));
+  document.querySelectorAll('.dest[data-id]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===target));
+  const g=$('guide');
+  if(!target){
+    pathEl.setAttribute('points',''); pin.setAttribute('cx',-99);
+    g.innerHTML='<h3>اختر وجهتك من القائمة</h3><p>أو اضغط على أي غرفة في الخريطة، وسيظهر لك المسار من موقعك الحالي.</p>';
+    if(fit)flyTo(FULL); return;
+  }
+  const up=target in UP, room=BYID[target], name=up?UP[target]:room.n;
+  const door=up?STAIR_DOOR:room.d.slice(0,2), pts=route(from,door);
+  pathEl.setAttribute('points',pts.map(p=>p.join(',')).join(' '));
+  pin.setAttribute('cx',door[0]); pin.setAttribute('cy',door[1]);
+  g.innerHTML='<h3></h3><ol></ol>'+(up?'<p class="note">خريطة الدور الثاني تُضاف بعد استلام مخططه.</p>':'');
+  g.querySelector('h3').textContent=name;
+  steps(pts,name,up).forEach(s=>{const li=document.createElement('li');li.textContent=s;g.querySelector('ol').appendChild(li);});
+  if(fit)fitPoints(pts);
+}
+function choose(id,scroll){target=id;render(true);if(scroll)document.querySelector('.mapbox').scrollIntoView({behavior:'smooth',block:'nearest'});}
+
+/* ---------- menus ---------- */
+function btn(parent,text,id,sub){
+  const b=document.createElement('button');b.type='button';b.className='dest';b.textContent=text;
+  if(sub){const s=document.createElement('small');s.textContent=sub;b.appendChild(s);}
+  if(id){b.dataset.id=id;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>choose(id,true));}
+  parent.appendChild(b);return b;
+}
+for(const m of MAIN){
+  if(m.wait){btn($('main'),m.n,null,'بانتظار المخطط').disabled=true;}
+  else if(m.halls){
+    const b=btn($('main'),m.n,null,'اختر القاعة');b.classList.add('more');b.setAttribute('aria-expanded','false');b.setAttribute('aria-controls','halls');
+    b.addEventListener('click',()=>{const open=$('halls').hidden;$('halls').hidden=!open;b.setAttribute('aria-expanded',open);});
+  } else btn($('main'),m.n,m.id);
+}
+for(const f of HALLS){
+  const row=document.createElement('div');row.className='hallrow';
+  const s=document.createElement('span');s.textContent=f.t;row.appendChild(s);
+  f.items.forEach(([id,n])=>btn(row,n,id).setAttribute('aria-label','قاعة '+n+' — '+f.t));
+  $('halls').appendChild(row);
+}
+OTHER.forEach(id=>btn($('other'),BYID[id].n,id));
+
+/* ---------- pan / zoom ---------- */
+const scale=()=>{const r=svg.getBoundingClientRect();return Math.max(vb.w/r.width,vb.h/r.height);};
+function toMap(cx,cy){const r=svg.getBoundingClientRect(),s=scale();return [vb.x+vb.w/2+(cx-r.left-r.width/2)*s,vb.y+vb.h/2+(cy-r.top-r.height/2)*s];}
+function zoomAt(f,cx,cy){
+  cancelAnimationFrame(anim);
+  const r=svg.getBoundingClientRect(); if(cx==null){cx=r.left+r.width/2;cy=r.top+r.height/2;}
+  const nw=Math.max(240,Math.min(FULL.w*1.2,vb.w*f)); f=nw/vb.w;
+  const [mx,my]=toMap(cx,cy);
+  vb={x:mx-(mx-vb.x)*f,y:my-(my-vb.y)*f,w:vb.w*f,h:vb.h*f}; applyVB();
+}
+const ptrs=new Map(); let moved=0,pinch=0;
+svg.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,[e.clientX,e.clientY]);if(ptrs.size===1)moved=0;if(ptrs.size===2){const a=[...ptrs.values()];pinch=dist(a[0],a[1]);}});
+svg.addEventListener('pointermove',e=>{
+  const p=ptrs.get(e.pointerId); if(!p)return;
+  const dx=e.clientX-p[0],dy=e.clientY-p[1]; ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+  if(ptrs.size===1){
+    moved+=Math.abs(dx)+Math.abs(dy);
+    if(moved>6){try{svg.setPointerCapture(e.pointerId);}catch(_){}cancelAnimationFrame(anim);const s=scale();vb.x-=dx*s;vb.y-=dy*s;applyVB();}
+  } else if(ptrs.size===2){
+    moved=99;const a=[...ptrs.values()],d=dist(a[0],a[1]);
+    if(pinch>0&&d>0)zoomAt(pinch/d,(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2);
+    pinch=d;
+  }
+});
+const up=e=>{ptrs.delete(e.pointerId);};
+svg.addEventListener('pointerup',up); svg.addEventListener('pointercancel',up);
+svg.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.deltaY>0?1.15:0.87,e.clientX,e.clientY);},{passive:false});
+svg.addEventListener('click',e=>{const id=e.target.dataset&&e.target.dataset.id;if(moved<=6&&id&&BYID[id].pick)choose(id,false);});
+$('zin').addEventListener('click',()=>zoomAt(0.75)); $('zout').addEventListener('click',()=>zoomAt(1.33));
+$('zfit').addEventListener('click',()=>flyTo(FULL));
+
+/* ---------- entrance: each barcode can open its own entrance with #m1 or #m2 ---------- */
+function setFrom(k,write){from=k;if(write){try{history.replaceState(null,'',k==='E2'?'#m2':'#m1');}catch(_){}}render(true);}
+$('from1').addEventListener('click',()=>setFrom('E1',true)); $('from2').addEventListener('click',()=>setFrom('E2',true));
+addEventListener('hashchange',()=>setFrom(location.hash==='#m2'?'E2':'E1',false));
+if(location.hash==='#m2')from='E2';
+applyVB(); render(false);
+</script>
+</body>
+</html>
