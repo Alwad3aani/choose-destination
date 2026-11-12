@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Layout idea: blueprint sheet. Map is the hero, chooser above it, walking steps below. Phone first. */
+/* Layout idea: blueprint sheet. Building picker and search on top, map as the hero, walking steps below. Phone first. */
 :root{
   --paper:#eef3fa; --surface:#ffffff; --ink:#12233d; --muted:#586a84;
   --line:#2a5ca6; --room:#e3ecf8; --route:#e2560a; --route-soft:#ffe1cc; --alert:#c62828;
@@ -37,21 +37,21 @@ h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.2;mar
 .seg button{border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:6px 12px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--line);color:var(--surface);font-weight:600}
 h2{font-size:15px;font-weight:600;color:var(--muted);margin:0 0 8px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.dest{font:inherit;font-weight:500;text-align:right;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:48px;justify-content:center}
+.chooser{display:flex;flex-direction:column;gap:10px}
+.secs{display:flex;gap:6px;flex-wrap:wrap}
+.secs button{font:inherit;font-size:14px;color:var(--ink);background:transparent;border:1.5px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
+.secs button[aria-pressed="true"]{background:var(--line);color:var(--surface);font-weight:600}
+#q{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+#q::placeholder{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:236px;overflow-y:auto;padding:2px}
+.dest{font:inherit;font-weight:500;text-align:right;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:48px;justify-content:center;line-height:1.4}
 .dest small{font-weight:400;font-size:12px;color:var(--muted)}
 .dest[aria-pressed="true"]{background:var(--route);border-color:var(--route);color:#fff}
 .dest[aria-pressed="true"] small{color:#fff}
-.dest:disabled{border-style:dashed;border-color:var(--muted);color:var(--muted);cursor:not-allowed}
-.dest.more::after{content:"‹";position:absolute;inset-inline-end:12px;font-size:20px;transition:transform .2s}
-.dest.more{position:relative}
-.dest.more[aria-expanded="true"]::after{transform:rotate(-90deg)}
-button:focus-visible{outline:3px solid var(--route);outline-offset:2px}
-#halls{border:1.5px solid var(--line);border-radius:8px;padding:12px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
-#halls[hidden]{display:none}
-.hallrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.hallrow span{font-size:13px;color:var(--muted);min-width:84px}
-.hallrow .dest{min-width:52px;min-height:44px;align-items:center;font-variant-numeric:tabular-nums;font-weight:600}
+.none{color:var(--muted);margin:0}
+button:focus-visible,input:focus-visible{outline:3px solid var(--route);outline-offset:2px}
+#legs{align-self:flex-start}
+#legs[hidden]{display:none}
 .mapbox{position:relative;background:var(--surface);border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
 #map{display:block;width:100%;aspect-ratio:4/3;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 @media (min-width:640px){#map{aspect-ratio:16/10}}
@@ -60,21 +60,25 @@ button:focus-visible{outline:3px solid var(--route);outline-offset:2px}
 .zoom button.fit{font-size:11px}
 .floor{position:absolute;top:10px;inset-inline-end:10px;background:var(--line);color:var(--surface);font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px}
 #guide{background:var(--surface);border:1.5px solid var(--line);border-inline-start:6px solid var(--route);border-radius:8px;padding:14px 16px}
-#guide h3{font-family:var(--display);font-weight:700;font-size:22px;margin:0 0 6px;line-height:1.3}
+#guide h3{font-family:var(--display);font-weight:700;font-size:22px;margin:0;line-height:1.3}
+#guide .where{color:var(--muted);font-size:14px;margin:0 0 8px}
+#guide h4{font-size:14px;font-weight:600;color:var(--line);margin:10px 0 2px}
 #guide ol{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:4px}
 #guide p{margin:0;color:var(--muted)}
-#guide .note{margin-top:8px;font-size:13px}
 footer{color:var(--muted);font-size:12px;text-align:center}
 /* map drawing */
 .floorbg{fill:var(--surface)}
+.floorbg.wall{stroke:var(--line);stroke-width:2}
 .room{fill:var(--room);stroke:var(--line);stroke-width:2}
-.room.pick{cursor:pointer}
-.room.on{fill:var(--route-soft);stroke:var(--route);stroke-width:3}
+.zone{fill:var(--room);fill-opacity:.45;stroke:var(--line);stroke-width:1.5;stroke-dasharray:7 6}
+.pick{cursor:pointer}
+.room.on,.zone.on{fill:var(--route-soft);fill-opacity:1;stroke:var(--route);stroke-width:3}
 .stair{fill:none;stroke:var(--line);stroke-width:1}
 .gap{stroke:var(--surface);stroke-width:5}
 .lbl{fill:var(--ink);font-family:var(--body);font-size:14px;text-anchor:middle;pointer-events:none}
-.lbl.s{font-size:9px}
+.lbl.s{font-size:10px}
 .lbl.ent{fill:var(--line);font-weight:600;font-size:15px}
+.lbl.note{fill:var(--muted);font-size:11px}
 .lbl.exit{fill:var(--alert);font-size:11px;font-weight:600}
 #path{fill:none;stroke:var(--route);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:14 12;animation:march 1s linear infinite}
 @keyframes march{to{stroke-dashoffset:-26}}
@@ -99,15 +103,18 @@ footer{color:var(--muted);font-size:12px;text-align:center}
     </div>
   </header>
 
-  <section>
+  <section class="chooser">
     <h2>إلى أين تريد الذهاب؟</h2>
-    <div class="grid" id="main"></div>
+    <input id="q" type="search" placeholder="ابحث باسم المكان، مثل: معمل ٦" aria-label="ابحث عن وجهة">
+    <div class="secs" id="secs" role="group" aria-label="المبنى"></div>
+    <div class="grid" id="list"></div>
   </section>
-  <div id="halls" hidden></div>
+
+  <div class="seg" id="legs" role="group" aria-label="مراحل المسار" hidden></div>
 
   <div class="mapbox">
-    <svg id="map" role="img" aria-label="مخطط الدور الأرضي"></svg>
-    <span class="floor">الدور الأرضي</span>
+    <svg id="map" role="img" aria-label="مخطط المبنى"></svg>
+    <span class="floor" id="badge"></span>
     <div class="zoom">
       <button type="button" id="zin" aria-label="تكبير">+</button>
       <button type="button" id="zout" aria-label="تصغير">−</button>
@@ -117,77 +124,162 @@ footer{color:var(--muted);font-size:12px;text-align:center}
 
   <section id="guide" aria-live="polite"></section>
 
-  <section>
-    <h2>وجهات أخرى في الدور الأرضي</h2>
-    <div class="grid" id="other"></div>
-  </section>
-
-  <footer>الإصدار ٠٫١ · نموذج أولي للدور الأرضي</footer>
+  <footer>الإصدار ٠٫٢ · المبنى الإداري بدوريه ومباني الأقسام الأربعة</footer>
 </div>
 
 <script>
-const NS='http://www.w3.org/2000/svg', CX=778, CY=423.5;
-const FULL={x:206,y:56,w:1144,h:736};
+const NS='http://www.w3.org/2000/svg';
+const WC_TRAINER='دورة مياه المدربين', WC_TRAINEE='دورة مياه المتدربين';
 
-// r: x,y,w,h — d: door x,y + wall direction (h = horizontal wall, v = vertical wall)
-const ROOMS=[
- {id:'it',  n:'تقنية المعلومات', r:[236,102,210,68], d:[432,170,'h'], pick:1},
- {id:'data',n:'غرفة البيانات', r:[446,102,78,68], s:1},
- {id:'vt',  n:'وكيل شؤون المتدربين', l:['وكيل شؤون','المتدربين'], r:[524,102,91,68], d:[590,170,'h'], pick:1, s2:1},
- {id:'act', n:'صالة الأنشطة والانتظار', l:['صالة الأنشطة والانتظار للمتدربين'], r:[942,102,378,48], poly:'942,102 1320,102 1320,150 1113,150 1113,170 942,170', d:[965,170,'h'], pick:1},
- {id:'h9',  n:'قاعة تدريب ٩', r:[236,220,210,190], d:[446,245,'v'], pick:1},
- {id:'h10', n:'قاعة تدريب ١٠', r:[236,410,210,180], d:[446,432,'v'], pick:1},
- {id:'dev', n:'قاعة التطوير', r:[236,590,210,155], d:[446,614,'v'], pick:1},
- {id:'q',   n:'وكيل الجودة', r:[446,650,171,95], d:[472,650,'h'], pick:1},
- {id:'el',  n:'غرفة الكهرباء', l:['كهرباء'], r:[524,240,59,28], s:1},
- {id:'st1', n:'مستودع', r:[524,268,93,35], s:1},
- {id:'inv', n:'قاعة الابتكار', l:['قاعة','الابتكار'], r:[524,303,93,165], d:[524,330,'v'], pick:1},
- {id:'caf', n:'كافتيريا المدربين', l:['كافتيريا'], r:[570,468,47,47], s:1},
- {id:'wc1', n:'دورة مياه', r:[524,515,93,80], d:[524,555,'v'], pick:1},
- {id:'reg', n:'القبول والتسجيل', l:['قسم القبول والتسجيل'], r:[583,228,342,75], d:[640,228,'h'], pick:1},
- {id:'lift',n:'المصعد', r:[925,228,110,34], d:[980,228,'h'], pick:1},
- {id:'wc2', n:'دورة مياه', r:[925,262,110,58], d:[1035,292,'v'], pick:1},
- {id:'st2', n:'مستودع', r:[942,320,93,30], s:1},
- {id:'h21', n:'قاعة تدريب ٢١', l:['قاعة','تدريب ٢١'], r:[942,350,93,165], d:[1035,374,'v'], pick:1},
- {id:'gd',  n:'التوجيه والإرشاد', l:['التوجيه','والإرشاد'], r:[942,515,93,80], d:[1035,578,'v'], pick:1},
- {id:'h4',  n:'قاعة تدريب ٤', r:[1113,220,207,190], d:[1113,245,'v'], pick:1},
- {id:'h3',  n:'قاعة تدريب ٣', r:[1113,410,207,180], d:[1113,432,'v'], pick:1},
- {id:'tr',  n:'مكاتب المدربين', l:['مكاتب المدربين','قسم الدراسات العامة'], r:[1113,590,207,155], d:[1113,614,'v'], pick:1},
- {id:'vtr', n:'وكيل شؤون المدربين', r:[942,650,171,95], d:[1090,650,'h'], pick:1}
-];
-const BYID=Object.fromEntries(ROOMS.map(r=>[r.id,r]));
+/* r: x,y,w,h · d: door x,y + wall direction (h/v) · via: point passed just before the door
+   z: open work area inside a hall (no walls) · s: small label · lc: label centre */
+// workshop buildings share two mirrored office strips
+function stripA(wcLeft,wcRight){return [
+ {id:'el',n:'غرفة الكهرباء',r:[89,578,155,68],d:[244,612,'v'],via:[282,560]},
+ {id:'st',n:'مستودع القسم',r:[89,646,231,114],d:[285,646,'h'],via:[282,560]},
+ {id:'m3',n:'معمل ٣',r:[320,578,182,182],d:[362,578,'h']},
+ {id:'hd',n:'مكتب رئيس القسم',r:[502,578,173,182],d:[642,578,'h']},
+ {id:'tr',n:'مكاتب المدربين',r:[801,578,128,182],d:[830,578,'h']},
+ {id:'m6',n:'معمل ٦',r:[929,578,173,182],d:[960,578,'h']},
+ {id:'w1',n:wcLeft,r:[1102,578,140,182],d:[1145,578,'h'],lc:[1172,715],s:1},
+ {id:'w2',n:wcRight,r:[1242,578,140,182],d:[1340,578,'h'],lc:[1312,715],s:1},
+ {id:'cf',n:'كافتيريا المدربين',r:[1192,578,98,92],d:[1242,578,'h'],s:1}
+];}
+function stripB(){return [
+ {id:'w1',n:WC_TRAINER,r:[113,585,135,183],d:[155,585,'h'],lc:[180,720],s:1},
+ {id:'w2',n:WC_TRAINEE,r:[248,585,136,183],d:[345,585,'h'],lc:[316,720],s:1},
+ {id:'cf',n:'كافتيريا المدربين',r:[201,585,96,95],d:[250,585,'h'],s:1},
+ {id:'m6',n:'معمل ٦',r:[384,585,168,183],d:[522,585,'h']},
+ {id:'tr',n:'مكاتب المدربين',r:[552,585,124,183],d:[647,585,'h']},
+ {id:'hd',n:'مكتب رئيس القسم',r:[798,585,168,183],d:[828,585,'h']},
+ {id:'m3',n:'معمل ٣',r:[966,585,176,183],d:[1100,585,'h']},
+ {id:'el',n:'غرفة الكهرباء',r:[1215,585,151,70],d:[1215,612,'v'],via:[1178,565]},
+ {id:'st',n:'مستودع القسم',r:[1142,655,224,113],d:[1178,655,'h'],via:[1178,565]}
+];}
+const SHOP_A={full:{x:55,y:28,w:1360,h:790},bg:[89,58,1293,702],wall:1,
+  nodes:{E:[738,750],A:[738,540],W:[110,540],X:[1360,540]},edges:[['E','A'],['A','W'],['A','X']],
+  base:[['gap',678,760,798,760],['label',['المدخل الرئيسي'],738,785,'ent'],['label',['مخرج الطوارئ'],160,515,'exit'],['label',['مخرج الطوارئ'],1310,515,'exit']]};
+const SHOP_B={full:{x:80,y:32,w:1320,h:794},bg:[113,62,1253,706],wall:1,
+  nodes:{E:[738,758],A:[738,548],W:[135,548],X:[1345,548]},edges:[['E','A'],['A','W'],['A','X']],
+  base:[['gap',679,768,795,768],['label',['المدخل الرئيسي'],738,793,'ent'],['label',['مخرج الطوارئ'],185,522,'exit'],['label',['مخرج الطوارئ'],1295,522,'exit']]};
+
+const MAPS={
+ g:{name:'المبنى الإداري',floor:'الدور الأرضي',full:{x:206,y:56,w:1144,h:736},bg:[236,102,1084,643],
+  nodes:{E1:[780,738],L:[780,622],BL:[485,622],BR:[1074,622],TL:[485,199],TR:[1074,199],T:[780,199],E2:[780,110],W:[432,199],S:[780,532]},
+  edges:[['E1','L'],['L','BL'],['L','BR'],['BL','TL'],['BR','TR'],['TL','T'],['T','TR'],['T','E2'],['TL','W'],['L','S']],
+  decor:[['stairs',236,170,184,50,1],['stairs',1113,150,207,70,1],['stairs',617,303,325,207,0],['box',735,390,90,44],
+   ['label',['الدرج'],780,412],['label',['الدرج'],328,195,'s'],['label',['الدرج'],1216,185,'s'],['label',['مخرج الطوارئ'],1250,212,'exit'],
+   ['label',['المدخل الرئيسي ١'],780,770,'ent'],['label',['المدخل الرئيسي ٢'],780,84,'ent']],
+  rooms:[
+   {id:'it',n:'تقنية المعلومات',r:[236,102,210,68],d:[432,170,'h']},
+   {id:'data',n:'غرفة البيانات',r:[446,102,78,68],s:1},
+   {id:'vt',n:'وكيل شؤون المتدربين',l:['وكيل شؤون','المتدربين'],r:[524,102,91,68],d:[590,170,'h'],s:1},
+   {id:'act',n:'صالة الأنشطة والانتظار للمتدربين',r:[942,102,378,48],poly:'942,102 1320,102 1320,150 1113,150 1113,170 942,170',d:[965,170,'h']},
+   {id:'h9',n:'قاعة تدريب ٩',r:[236,220,210,190],d:[446,245,'v']},
+   {id:'h10',n:'قاعة تدريب ١٠',r:[236,410,210,180],d:[446,432,'v']},
+   {id:'dev',n:'قاعة التطوير',r:[236,590,210,155],d:[446,614,'v']},
+   {id:'q',n:'وكيل الجودة',r:[446,650,171,95],d:[472,650,'h']},
+   {id:'el',n:'غرفة الكهرباء',l:['غرفة','الكهرباء'],r:[524,240,59,28],s:1},
+   {id:'st1',n:'مستودع',r:[524,268,93,35],s:1},
+   {id:'inv',n:'قاعة الابتكار',l:['قاعة','الابتكار'],r:[524,303,93,165],d:[524,330,'v']},
+   {id:'caf',n:'كافتيريا',r:[570,468,47,47],s:1},
+   {id:'wc1',n:'دورة مياه',r:[524,515,93,80],d:[524,555,'v']},
+   {id:'reg',n:'قسم القبول والتسجيل',r:[583,228,342,75],d:[640,228,'h']},
+   {id:'lift',n:'المصعد',r:[925,228,110,34],d:[980,228,'h']},
+   {id:'wc2',n:'دورة مياه',r:[925,262,110,58],d:[1035,292,'v']},
+   {id:'st2',n:'مستودع',r:[942,320,93,30],s:1},
+   {id:'h21',n:'قاعة تدريب ٢١',l:['قاعة','تدريب ٢١'],r:[942,350,93,165],d:[1035,374,'v']},
+   {id:'gd',n:'قسم التوجيه والإرشاد والتنسيق الوظيفي',l:['قسم التوجيه','والإرشاد','والتنسيق الوظيفي'],r:[942,515,93,80],d:[1035,578,'v'],s:1},
+   {id:'h4',n:'قاعة تدريب ٤',r:[1113,220,207,190],d:[1113,245,'v']},
+   {id:'h3',n:'قاعة تدريب ٣',r:[1113,410,207,180],d:[1113,432,'v']},
+   {id:'tr',n:'مكاتب المدربين – قسم الدراسات العامة',l:['مكاتب المدربين','قسم الدراسات العامة'],r:[1113,590,207,155],d:[1113,614,'v']},
+   {id:'vtr',n:'وكيل شؤون المدربين',r:[942,650,171,95],d:[1090,650,'h']}
+  ]},
+ f1:{name:'المبنى الإداري',floor:'الدور الأول',full:{x:140,y:25,w:1220,h:765},bg:[173,55,1154,705],wall:1,
+  nodes:{S:[750,560],L:[750,624],BL:[435,624],BR:[1063,624],TL:[435,162],TR:[1063,162],Bw:[405,624],Be:[1090,624]},
+  edges:[['S','L'],['L','BL'],['L','BR'],['BL','TL'],['BR','TR'],['TL','TR'],['BL','Bw'],['BR','Be']],
+  decor:[['stairs',178,118,185,50,1],['stairs',1105,108,215,52,1],['stairs',607,305,290,240,0],['box',708,400,84,40],
+   ['label',['الدرج'],750,425],['label',['الدرج'],270,172,'s'],['label',['الدرج'],1212,165,'s'],['label',['مخرج الطوارئ'],1255,178,'exit']],
+  rooms:[
+   {id:'cst',n:'مستودع قسم الحاسب الآلي',r:[173,55,304,52],d:[435,107,'h']},
+   {id:'l7',n:'معمل ٧',r:[477,55,307,75],d:[760,130,'h']},
+   {id:'l6',n:'معمل ٦',r:[784,55,235,75],d:[980,130,'h']},
+   {id:'l5',n:'معمل ٥',r:[1019,55,308,52],d:[1063,107,'h']},
+   {id:'h9',n:'قاعة تدريب ٩',r:[173,185,221,206],d:[394,210,'v']},
+   {id:'h10',n:'قاعة تدريب ١٠',r:[173,391,221,199],d:[394,415,'v']},
+   {id:'l11',n:'معمل ١١',r:[173,590,221,170],d:[394,602,'v']},
+   {id:'l12',n:'معمل ١٢',r:[395,656,215,104],d:[415,656,'h']},
+   {id:'sec',n:'مكتب سكرتير العميد',l:['مكتب','سكرتير العميد'],r:[890,656,130,104],d:[995,656,'h']},
+   {id:'dean',n:'مكتب العميد',r:[1105,620,222,140],poly:'1020,656 1105,656 1105,590 1327,590 1327,760 1020,760',d:[1068,656,'h']},
+   {id:'l4',n:'معمل ٤',r:[1105,185,222,206],d:[1105,210,'v']},
+   {id:'l3',n:'معمل ٣',r:[1105,391,222,199],d:[1105,415,'v']},
+   {id:'el',n:'غرفة الكهرباء',r:[477,193,100,42],s:1},
+   {id:'st',n:'مستودع',r:[477,235,100,40],s:1},
+   {id:'gst',n:'قاعة الضيافة',l:['قاعة','الضيافة'],r:[477,275,100,116],d:[477,345,'v']},
+   {id:'off',n:'مكتب',r:[477,391,100,65],d:[477,415,'v']},
+   {id:'caf',n:'كافتيريا',r:[527,456,50,52],s:1},
+   {id:'wc1',n:'دورة مياه',r:[477,508,100,84],d:[477,550,'v']},
+   {id:'head',n:'رئيس قسم الحاسب الآلي',l:['رئيس قسم','الحاسب الآلي'],r:[577,193,172,82],d:[715,193,'h']},
+   {id:'trn',n:'مكتب المدربين – قسم الحاسب الآلي',l:['مكتب المدربين','قسم الحاسب الآلي'],r:[749,193,130,82],d:[785,193,'h']},
+   {id:'lift',n:'المصعد',r:[879,193,143,40],d:[950,193,'h']},
+   {id:'wc2',n:'دورة مياه',r:[879,233,143,72],d:[1022,265,'v']},
+   {id:'st2',n:'مستودع',r:[922,305,100,50],s:1},
+   {id:'hr',n:'شؤون الموظفين',l:['شؤون','الموظفين'],r:[922,355,100,86],d:[1022,372,'v']},
+   {id:'meet',n:'قاعة الاجتماعات',l:['قاعة','الاجتماعات'],r:[922,441,100,151],d:[1000,592,'h']}
+  ]},
+ cars:{name:'مبنى قسم ورشة السيارات',floor:'',...SHOP_A,
+  decor:[['label',['مدخل السيارات'],276,90,'note'],['label',['باب بمحرك كهربائي ٣'],523,90,'note'],['label',['باب بمحرك كهربائي ٢'],737,90,'note'],['label',['باب بمحرك كهربائي ١'],977,90,'note'],['label',['مدخل السيارات'],1243,90,'note']],
+  rooms:[{id:'lab',n:'معمل تدريبي',z:1,r:[430,150,198,240],d:[529,392]},...stripA(WC_TRAINEE,WC_TRAINER)]},
+ mech:{name:'مبنى قسم التقنية الميكانيكية',floor:'',...SHOP_B,
+  decor:[['label',['مدخل السيارات'],478,94,'note'],['label',['مدخل السيارات'],967,94,'note']],
+  rooms:[
+   {id:'ac',n:'ورشة صيانة أنظمة التبريد وتكييف الهواء',also:['ورشة تكييف الهواء'],l:['١- ورشة صيانة أنظمة التبريد','وتكييف الهواء','٢- ورشة تكييف الهواء'],z:1,r:[140,100,275,330],d:[290,432]},
+   {id:'com',n:'ورشة التبريد التجاري',z:1,r:[585,120,290,365],d:[730,487]},
+   {id:'bas',n:'أساسيات تقنية التبريد',z:1,r:[1065,280,255,205],d:[1190,487]},
+   {id:'free',n:'مساحة عمل حر',z:1,r:[1078,62,288,132],d:[1345,196]},
+   ...stripB()]},
+ weld:{name:'مبنى قسم اللحام',floor:'',...SHOP_B,
+  decor:[['label',['باب بمحرك كهربائي ٢'],407,94,'note'],['label',['باب بمحرك كهربائي ١'],1020,94,'note']],
+  rooms:[
+   {id:'dev',n:'منطقة عمل أجهزة',l:['منطقة','عمل أجهزة'],z:1,r:[121,65,105,368],d:[173,435]},
+   {id:'basic',n:'ورشة تدريب أساسي',z:1,r:[265,160,270,275],d:[378,437]},
+   {id:'arc',n:'غرف لحام القوس الكهربائي',z:1,r:[605,110,255,360],d:[738,472]},
+   {id:'found',n:'ورشة تأسيسية للتبريد وتكييف الهواء',l:['ورشة تأسيسية','للتبريد وتكييف الهواء'],z:1,r:[890,160,265,275],d:[1019,437]},
+   {id:'gas',n:'غرف اللحام الغازي',l:['غرف','اللحام الغازي'],z:1,r:[1195,155,125,280],d:[1257,437]},
+   ...stripB()]},
+ elec:{name:'مبنى قسم التقنية الكهربائية',floor:'',...SHOP_A,
+  decor:[['label',['باب بمحرك كهربائي ٣'],272,90,'note'],['label',['مدخل السيارات'],520,90,'note'],['label',['باب بمحرك كهربائي ٢'],735,90,'note'],['label',['باب بمحرك كهربائي ١'],975,90,'note'],['label',['مدخل السيارات'],1243,90,'note']],
+  rooms:[
+   {id:'free',n:'منطقة عمل حر',z:1,r:[89,58,167,100],d:[170,160],s:1},
+   {id:'ind',n:'ورشة لف وصيانة المحركات الحثية',l:['ورشة لف وصيانة','المحركات الحثية'],z:1,r:[250,165,205,260],d:[352,427]},
+   {id:'one',n:'ورشة لف وإصلاح الآلات أحادية الوجه',l:['ورشة لف وإصلاح','الآلات أحادية الوجه'],z:1,r:[608,103,212,322],d:[714,427]},
+   {id:'spec',n:'ورشة تركيبات صناعية خاصة',l:['ورشة تركيبات','صناعية خاصة'],z:1,r:[848,103,122,322],d:[909,427]},
+   {id:'three',n:'ورشة تحكم المحركات ثلاثية الأوجه',l:['ورشة تحكم المحركات','ثلاثية الأوجه'],z:1,r:[980,103,182,322],d:[1071,427]},
+   ...stripA(WC_TRAINER,WC_TRAINEE)]}
+};
+const ORDER=['g','f1','cars','mech','weld','elec'];
+const secTitle=k=>MAPS[k].floor?MAPS[k].name+' · '+MAPS[k].floor:MAPS[k].name;
+const SHORT={g:'الإداري · الأرضي',f1:'الإداري · الأول',cars:'ورشة السيارات',mech:'التقنية الميكانيكية',weld:'اللحام',elec:'التقنية الكهربائية'};
 const STAIR_DOOR=[780,512];
 
-// walkable corridor centre lines
-const NODES={E1:[780,738],L:[780,622],BL:[485,622],BR:[1074,622],TL:[485,199],TR:[1074,199],T:[780,199],E2:[780,110],W:[432,199],S:[780,532]};
-const EDGES=[['E1','L'],['L','BL'],['L','BR'],['BL','TL'],['BR','TR'],['TL','T'],['T','TR'],['T','E2'],['TL','W'],['L','S']];
+// every place a visitor can ask for
+const PLACES=[];
+for(const k of ORDER)for(const r of MAPS[k].rooms){
+  if(!r.d)continue;
+  PLACES.push({m:k,id:r.id,n:r.n});
+  (r.also||[]).forEach(n=>PLACES.push({m:k,id:r.id,n}));
+}
 
-const MAIN=[
- {id:'vt', n:'وكالة شؤون المتدربين'},
- {id:'vtr',n:'وكيل شؤون المدربين'},
- {n:'المكتبة', wait:1},{n:'العميد', wait:1},
- {n:'قسم الحاسب الآلي', wait:1},{n:'قسم التقنية الكهربائية', wait:1},{n:'قسم التبريد', wait:1},
- {id:'dev',n:'قاعة التطوير'},
- {halls:1, n:'القاعات الدراسية'}
-];
-const HALLS=[
- {t:'الدور الأرضي', items:[['h3','٣'],['h4','٤'],['h9','٩'],['h10','١٠'],['h21','٢١']]},
- {t:'الدور الثاني', items:[['up9','٩'],['up10','١٠'],['up11','١١'],['up12','١٢']]}
-];
-const UP={up9:'قاعة ٩ — الدور الثاني',up10:'قاعة ١٠ — الدور الثاني',up11:'قاعة ١١ — الدور الثاني',up12:'قاعة ١٢ — الدور الثاني'};
-const OTHER=['reg','q','it','gd','inv','act','tr','lift','wc1'];
-
-let from='E1', target=null, vb={...FULL}, anim=0;
+let from='E1', target=null, section='g', view='g', legs=[], legIdx=0, drawn=null, rot=false;
+let vb={...MAPS.g.full}, anim=0, plan, pathEl, pin, here, hereT;
 const $=id=>document.getElementById(id);
 const svg=$('map');
 function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
 
-/* ---------- draw the plan ---------- */
-const plan=el('g',{id:'plan'});
-el('rect',{x:236,y:102,width:1084,height:643,class:'floorbg'},plan);
-function label(lines,cx,cy,cls){
-  const t=el('text',{class:'lbl '+(cls||''),'data-cx':cx,'data-cy':cy},plan), lh=cls==='s'?11:18;
-  lines.forEach((s,i)=>{const ts=el('tspan',{x:cx,y:cy-(lines.length-1)*lh/2+i*lh+ (cls==='s'?3:5)},t);ts.textContent=s;});
+/* ---------- draw a plan ---------- */
+function label(lines,cx,cy,cls,parent){
+  const t=el('text',{class:'lbl '+(cls||''),'data-cx':cx,'data-cy':cy},parent||plan), lh=cls==='s'?12:18;
+  lines.forEach((s,i)=>{const ts=el('tspan',{x:cx,y:cy-(lines.length-1)*lh/2+i*lh+(cls==='s'?3:5)},t);ts.textContent=s;});
   return t;
 }
 function stairs(x,y,w,h,vertical){
@@ -195,120 +287,151 @@ function stairs(x,y,w,h,vertical){
   if(vertical){for(let i=x+12;i<x+w;i+=12)el('line',{x1:i,y1:y+8,x2:i,y2:y+h-8,class:'stair'},plan);}
   else{for(let j=y+14;j<y+h;j+=14)el('line',{x1:x+40,y1:j,x2:x+w-40,y2:j,class:'stair'},plan);}
 }
-stairs(236,170,184,50,true); stairs(1113,150,207,70,true); stairs(617,303,325,207,false);
-el('rect',{x:735,y:390,width:90,height:44,rx:6,class:'floorbg'},plan);
-label(['الدرج الرئيسي'],780,412);
-label(['الدرج'],328,195,'s'); label(['الدرج'],1216,185,'s');
-label(['مخرج الطوارئ ←'],1250,212,'exit');
-for(const r of ROOMS){
-  const [x,y,w,h]=r.r;
-  const shape=r.poly?el('polygon',{points:r.poly},plan):el('rect',{x,y,width:w,height:h},plan);
-  shape.setAttribute('class','room'+(r.pick?' pick':''));
-  shape.dataset.id=r.id; r.el=shape;
-  if(r.d){const [dx,dy,o]=r.d; el('line',o==='h'?{x1:dx-11,y1:dy,x2:dx+11,y2:dy,class:'gap'}:{x1:dx,y1:dy-11,x2:dx,y2:dy+11,class:'gap'},plan);}
-  label(r.l||[r.n],x+w/2,y+h/2,(r.s||r.s2)?'s':'');
+function drawMap(k){
+  const M=MAPS[k]; drawn=k;
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  plan=el('g',{id:'plan'});
+  const b=M.bg; el('rect',{x:b[0],y:b[1],width:b[2],height:b[3],class:'floorbg'+(M.wall?' wall':'')},plan);
+  const later=[];
+  for(const d of (M.base||[]).concat(M.decor||[])){
+    if(d[0]==='stairs')stairs(d[1],d[2],d[3],d[4],d[5]);
+    else if(d[0]==='gap')el('line',{x1:d[1],y1:d[2],x2:d[3],y2:d[4],class:'gap'},plan);
+    else later.push(d);
+  }
+  for(const r of M.rooms){
+    const [x,y,w,h]=r.r;
+    const shape=r.poly?el('polygon',{points:r.poly},plan):el('rect',{x,y,width:w,height:h},plan);
+    shape.setAttribute('class',(r.z?'zone':'room')+(r.d?' pick':''));
+    shape.dataset.id=r.id; r.el=shape;
+    if(r.d&&r.d[2]){const [dx,dy,o]=r.d; el('line',o==='h'?{x1:dx-11,y1:dy,x2:dx+11,y2:dy,class:'gap'}:{x1:dx,y1:dy-11,x2:dx,y2:dy+11,class:'gap'},plan);}
+  }
+  for(const r of M.rooms){const c=r.lc||[r.r[0]+r.r[2]/2,r.r[1]+r.r[3]/2];label(r.l||[r.n],c[0],c[1],r.s?'s':'');}
+  for(const d of later){
+    if(d[0]==='box')el('rect',{x:d[1],y:d[2],width:d[3],height:d[4],rx:6,class:'floorbg'},plan);
+    else label(d[1],d[2],d[3],d[4]);
+  }
+  pathEl=el('polyline',{id:'path',points:''},plan);
+  pin=el('circle',{id:'pin',r:9,cx:-999,cy:-999},plan);
+  here=el('g',{id:'here'},plan);
+  el('circle',{class:'p',r:22},here); el('circle',{class:'c',r:9},here);
+  hereT=el('text',{class:'lbl',x:62,y:5,'data-cx':62,'data-cy':0},here);
 }
-label(['المدخل الرئيسي ١'],780,770,'ent'); label(['المدخل الرئيسي ٢'],780,84,'ent');
-const pathEl=el('polyline',{id:'path',points:''},plan);
-const pin=el('circle',{id:'pin',r:9,cx:-99,cy:-99},plan);
-const here=el('g',{id:'here'},plan);
-el('circle',{class:'p',r:22},here); el('circle',{class:'c',r:9},here);
-const hereT=el('text',{class:'lbl',x:62,y:5,'data-cx':62,'data-cy':0},here); hereT.textContent='أنت هنا';
 
 /* ---------- routing ---------- */
 const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 function project(p,a,b){const vx=b[0]-a[0],vy=b[1]-a[1];let t=((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy);t=Math.max(0,Math.min(1,t));return [a[0]+t*vx,a[1]+t*vy];}
-function route(start,door){
-  const nodes={...NODES}; let best=null;
-  for(const [a,b] of EDGES){const q=project(door,nodes[a],nodes[b]),d=dist(q,door);if(!best||d<best.d)best={a,b,q,d};}
+function route(M,start,door,via){
+  const nodes={...M.nodes}, tip=via||door; let best=null;
+  for(const [a,b] of M.edges){const q=project(tip,nodes[a],nodes[b]),d=dist(q,tip);if(!best||d<best.d)best={a,b,q,d};}
   nodes.P=best.q;
-  const edges=EDGES.filter(e=>!(e[0]===best.a&&e[1]===best.b)).concat([[best.a,'P'],['P',best.b]]);
+  const edges=M.edges.filter(e=>!(e[0]===best.a&&e[1]===best.b)).concat([[best.a,'P'],['P',best.b]]);
   const D={},prev={},done=new Set(); for(const k in nodes)D[k]=Infinity; D[start]=0;
   while(true){
     let u=null; for(const k in nodes)if(!done.has(k)&&(u===null||D[k]<D[u]))u=k;
     if(u===null||u==='P')break; done.add(u);
     for(const [a,b] of edges){const v=a===u?b:b===u?a:null;if(!v)continue;const nd=D[u]+dist(nodes[u],nodes[v]);if(nd<D[v]){D[v]=nd;prev[v]=u;}}
   }
-  let pts=[door],k='P'; while(k){pts.unshift(nodes[k]);k=prev[k];}
-  // drop repeated and collinear points
+  let pts=via?[via,door]:[door],k='P'; while(k){pts.unshift(nodes[k]);k=prev[k];}
   pts=pts.filter((p,i)=>i===0||dist(p,pts[i-1])>1);
   return pts.filter((p,i)=>{if(i===0||i===pts.length-1)return true;const a=pts[i-1],c=pts[i+1];return Math.abs((p[0]-a[0])*(c[1]-p[1])-(p[1]-a[1])*(c[0]-p[0]))>1;});
 }
 function turn(a,b,c){const x1=b[0]-a[0],y1=b[1]-a[1],x2=c[0]-b[0],y2=c[1]-b[1];const ang=Math.atan2(x1*y2-y1*x2,x1*x2+y1*y2)*180/Math.PI;return Math.abs(ang)<30?0:ang>0?1:-1;}
-function steps(pts,name,upstairs){
-  const out=['ادخل من '+(from==='E1'?'المدخل الرئيسي ١':'المدخل الرئيسي ٢')+' وامشِ للأمام.'];
+const side=t=>t===0?'أمامك مباشرة':t>0?'على يمينك':'على يسارك';
+function steps(leg){
+  const pts=leg.pts, out=[leg.first], what=leg.stairs?'الدرج':'«'+leg.name+'»';
   for(let i=1;i<pts.length-1;i++){
     const t=turn(pts[i-1],pts[i],pts[i+1]);
-    if(i===pts.length-2) out.push(upstairs?'الدرج الرئيسي '+(t===0?'أمامك مباشرة':t>0?'على يمينك':'على يسارك')+'.':'باب «'+name+'» '+(t===0?'أمامك مباشرة':t>0?'على يمينك':'على يسارك')+'.');
+    if(i===pts.length-2) out.push(what+' '+side(t)+'.');
     else if(t!==0) out.push('انعطف '+(t>0?'يميناً':'يساراً')+' واستمر في الممر.');
   }
-  if(pts.length===2) out.push(upstairs?'الدرج الرئيسي أمامك مباشرة.':'باب «'+name+'» أمامك مباشرة.');
-  if(upstairs) out.push('اصعد الدرج إلى الدور الثاني.');
+  if(pts.length===2) out.push(what+' أمامك مباشرة.');
+  if(leg.stairs) out.push('اصعد الدرج إلى الدور الأول.');
   return out;
+}
+function buildLegs(){
+  legs=[]; if(!target)return;
+  const M=MAPS[target.m], room=M.rooms.find(r=>r.id===target.id), door=room.d.slice(0,2);
+  const enter='ادخل من '+(from==='E1'?'المدخل الرئيسي ١':'المدخل الرئيسي ٢')+' وامشِ للأمام.';
+  if(target.m==='g') legs.push({m:'g',pts:route(M,from,door,room.via),first:enter,name:target.n});
+  else if(target.m==='f1'){
+    legs.push({m:'g',pts:route(MAPS.g,from,STAIR_DOOR),first:enter,stairs:1});
+    legs.push({m:'f1',pts:route(M,'S',door,room.via),first:'عند وصولك الدور الأول امشِ للأمام من الدرج.',name:target.n});
+  } else legs.push({m:target.m,pts:route(M,'E',door,room.via),first:'توجّه إلى '+M.name+' وادخل من المدخل الرئيسي، ثم امشِ للأمام.',name:target.n});
+  if(legIdx>=legs.length)legIdx=0;
 }
 
 /* ---------- view ---------- */
-const tf=p=>from==='E2'?[2*CX-p[0],2*CY-p[1]]:p;
+const centre=()=>{const f=MAPS[drawn].full;return [f.x+f.w/2,f.y+f.h/2];};
+const tf=p=>{if(!rot)return p;const c=centre();return [2*c[0]-p[0],2*c[1]-p[1]];};
 function applyVB(){svg.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);}
-function flyTo(t){
+function flyTo(t,jump){
   cancelAnimationFrame(anim);
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches){vb={...t};applyVB();return;}
+  if(jump||matchMedia('(prefers-reduced-motion: reduce)').matches){vb={...t};applyVB();return;}
   const s={...vb},t0=performance.now();
   (function f(now){const k=Math.min(1,(now-t0)/450),e=k*(2-k);for(const p of 'xywh')vb[p]=s[p]+(t[p]-s[p])*e;applyVB();if(k<1)anim=requestAnimationFrame(f);})(t0);
 }
-function fitPoints(pts){
+function fitPoints(pts,jump){
   const q=pts.map(tf),xs=q.map(p=>p[0]),ys=q.map(p=>p[1]);
   let x=Math.min(...xs)-110,y=Math.min(...ys)-90,w=Math.max(...xs)-x+110,h=Math.max(...ys)-y+90;
   if(w<460){x-=(460-w)/2;w=460;} if(h<300){y-=(300-h)/2;h=300;}
-  flyTo({x,y,w,h});
+  flyTo({x,y,w,h},jump);
 }
 function render(fit){
-  const rot=from==='E2';
-  plan.setAttribute('transform',rot?`rotate(180 ${CX} ${CY})`:'');
-  const s=NODES[from];
-  here.setAttribute('transform',`translate(${s[0]} ${s[1]})`);
+  buildLegs();
+  const leg=legs[legIdx], k=leg?leg.m:view, changed=drawn!==k;
+  if(changed)drawMap(k);
+  const M=MAPS[k];
+  rot=leg?leg.pts[1][1]>leg.pts[0][1]+1:(k==='g'&&from==='E2');
+  const c=centre();
+  plan.setAttribute('transform',rot?`rotate(180 ${c[0]} ${c[1]})`:'');
+  const s=leg?leg.pts[0]:k==='g'?M.nodes[from]:null;
+  here.setAttribute('transform',s?`translate(${s[0]} ${s[1]})`:'translate(-999 -999)');
+  hereT.textContent=k==='g'?'أنت هنا':'البداية';
   plan.querySelectorAll('text').forEach(t=>t.setAttribute('transform',rot?`rotate(180 ${t.dataset.cx} ${t.dataset.cy})`:''));
+  $('badge').textContent=secTitle(k);
+  svg.setAttribute('aria-label','مخطط '+secTitle(k));
   $('from1').setAttribute('aria-pressed',from==='E1'); $('from2').setAttribute('aria-pressed',from==='E2');
-  ROOMS.forEach(r=>r.el.classList.toggle('on',r.id===target));
-  document.querySelectorAll('.dest[data-id]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===target));
-  const g=$('guide');
-  if(!target){
-    pathEl.setAttribute('points',''); pin.setAttribute('cx',-99);
-    g.innerHTML='<h3>اختر وجهتك من القائمة</h3><p>أو اضغط على أي غرفة في الخريطة، وسيظهر لك المسار من موقعك الحالي.</p>';
-    if(fit)flyTo(FULL); return;
+  M.rooms.forEach(r=>r.el.classList.toggle('on',!!target&&target.m===k&&r.id===target.id));
+  if(leg){
+    pathEl.setAttribute('points',leg.pts.map(p=>p.join(',')).join(' '));
+    const e=leg.pts[leg.pts.length-1]; pin.setAttribute('cx',e[0]); pin.setAttribute('cy',e[1]);
+  } else {pathEl.setAttribute('points','');pin.setAttribute('cx',-999);}
+  // leg switcher
+  const lg=$('legs'); lg.hidden=legs.length<2; lg.textContent='';
+  legs.forEach((l,i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i?'٢ · ':'١ · ')+MAPS[l.m].floor;b.setAttribute('aria-pressed',i===legIdx);b.addEventListener('click',()=>{legIdx=i;render(true);});lg.appendChild(b);});
+  // written guide
+  const g=$('guide'); g.textContent='';
+  const add=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;g.appendChild(e);return e;};
+  if(!target){add('h3','اختر وجهتك من القائمة');add('p','أو اضغط على أي غرفة في الخريطة، وسيظهر لك المسار إليها.');}
+  else{
+    add('h3',target.n); add('p',secTitle(target.m),'where');
+    legs.forEach((l,i)=>{if(legs.length>1)add('h4',(i?'٢ · ':'١ · ')+MAPS[l.m].floor);const ol=add('ol');steps(l).forEach(t=>{const li=document.createElement('li');li.textContent=t;ol.appendChild(li);});});
   }
-  const up=target in UP, room=BYID[target], name=up?UP[target]:room.n;
-  const door=up?STAIR_DOOR:room.d.slice(0,2), pts=route(from,door);
-  pathEl.setAttribute('points',pts.map(p=>p.join(',')).join(' '));
-  pin.setAttribute('cx',door[0]); pin.setAttribute('cy',door[1]);
-  g.innerHTML='<h3></h3><ol></ol>'+(up?'<p class="note">خريطة الدور الثاني تُضاف بعد استلام مخططه.</p>':'');
-  g.querySelector('h3').textContent=name;
-  steps(pts,name,up).forEach(s=>{const li=document.createElement('li');li.textContent=s;g.querySelector('ol').appendChild(li);});
-  if(fit)fitPoints(pts);
+  if(fit||changed){if(leg)fitPoints(leg.pts,changed);else flyTo(M.full,changed);}
+  list();
 }
-function choose(id,scroll){target=id;render(true);if(scroll)document.querySelector('.mapbox').scrollIntoView({behavior:'smooth',block:'nearest'});}
+function choose(p,scroll){target=p;legIdx=0;render(true);if(scroll)document.querySelector('.mapbox').scrollIntoView({behavior:'smooth',block:'nearest'});}
 
 /* ---------- menus ---------- */
-function btn(parent,text,id,sub){
-  const b=document.createElement('button');b.type='button';b.className='dest';b.textContent=text;
-  if(sub){const s=document.createElement('small');s.textContent=sub;b.appendChild(s);}
-  if(id){b.dataset.id=id;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>choose(id,true));}
-  parent.appendChild(b);return b;
+function list(){
+  const q=$('q').value.trim(), box=$('list'); box.textContent='';
+  const items=q?PLACES.filter(p=>p.n.includes(q)):PLACES.filter(p=>p.m===section);
+  document.querySelectorAll('#secs button').forEach(b=>b.setAttribute('aria-pressed',!q&&b.dataset.k===section));
+  if(!items.length){const p=document.createElement('p');p.className='none';p.textContent='لا توجد وجهة بهذا الاسم. جرّب كلمة أخرى أو اختر المبنى من الأعلى.';box.appendChild(p);return;}
+  for(const p of items){
+    const b=document.createElement('button');b.type='button';b.className='dest';b.textContent=p.n;
+    if(q){const s=document.createElement('small');s.textContent=secTitle(p.m);b.appendChild(s);}
+    b.setAttribute('aria-pressed',!!target&&target.m===p.m&&target.id===p.id&&target.n===p.n);
+    b.addEventListener('click',()=>choose(p,true));
+    box.appendChild(b);
+  }
 }
-for(const m of MAIN){
-  if(m.wait){btn($('main'),m.n,null,'بانتظار المخطط').disabled=true;}
-  else if(m.halls){
-    const b=btn($('main'),m.n,null,'اختر القاعة');b.classList.add('more');b.setAttribute('aria-expanded','false');b.setAttribute('aria-controls','halls');
-    b.addEventListener('click',()=>{const open=$('halls').hidden;$('halls').hidden=!open;b.setAttribute('aria-expanded',open);});
-  } else btn($('main'),m.n,m.id);
+for(const k of ORDER){
+  const b=document.createElement('button');b.type='button';b.textContent=SHORT[k];b.dataset.k=k;
+  b.addEventListener('click',()=>{section=k;$('q').value='';if(!target){view=k;render(true);}else list();});
+  $('secs').appendChild(b);
 }
-for(const f of HALLS){
-  const row=document.createElement('div');row.className='hallrow';
-  const s=document.createElement('span');s.textContent=f.t;row.appendChild(s);
-  f.items.forEach(([id,n])=>btn(row,n,id).setAttribute('aria-label','قاعة '+n+' — '+f.t));
-  $('halls').appendChild(row);
-}
-OTHER.forEach(id=>btn($('other'),BYID[id].n,id));
+$('q').addEventListener('input',list);
 
 /* ---------- pan / zoom ---------- */
 const scale=()=>{const r=svg.getBoundingClientRect();return Math.max(vb.w/r.width,vb.h/r.height);};
@@ -316,7 +439,7 @@ function toMap(cx,cy){const r=svg.getBoundingClientRect(),s=scale();return [vb.x
 function zoomAt(f,cx,cy){
   cancelAnimationFrame(anim);
   const r=svg.getBoundingClientRect(); if(cx==null){cx=r.left+r.width/2;cy=r.top+r.height/2;}
-  const nw=Math.max(240,Math.min(FULL.w*1.2,vb.w*f)); f=nw/vb.w;
+  const nw=Math.max(240,Math.min(MAPS[drawn].full.w*1.2,vb.w*f)); f=nw/vb.w;
   const [mx,my]=toMap(cx,cy);
   vb={x:mx-(mx-vb.x)*f,y:my-(my-vb.y)*f,w:vb.w*f,h:vb.h*f}; applyVB();
 }
@@ -337,16 +460,19 @@ svg.addEventListener('pointermove',e=>{
 const up=e=>{ptrs.delete(e.pointerId);};
 svg.addEventListener('pointerup',up); svg.addEventListener('pointercancel',up);
 svg.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.deltaY>0?1.15:0.87,e.clientX,e.clientY);},{passive:false});
-svg.addEventListener('click',e=>{const id=e.target.dataset&&e.target.dataset.id;if(moved<=6&&id&&BYID[id].pick)choose(id,false);});
+svg.addEventListener('click',e=>{
+  const id=e.target.dataset&&e.target.dataset.id; if(moved>6||!id)return;
+  const p=PLACES.find(p=>p.m===drawn&&p.id===id); if(p){section=drawn;choose(p,false);}
+});
 $('zin').addEventListener('click',()=>zoomAt(0.75)); $('zout').addEventListener('click',()=>zoomAt(1.33));
-$('zfit').addEventListener('click',()=>flyTo(FULL));
+$('zfit').addEventListener('click',()=>flyTo(MAPS[drawn].full));
 
 /* ---------- entrance: each barcode can open its own entrance with #m1 or #m2 ---------- */
 function setFrom(k,write){from=k;if(write){try{history.replaceState(null,'',k==='E2'?'#m2':'#m1');}catch(_){}}render(true);}
 $('from1').addEventListener('click',()=>setFrom('E1',true)); $('from2').addEventListener('click',()=>setFrom('E2',true));
 addEventListener('hashchange',()=>setFrom(location.hash==='#m2'?'E2':'E1',false));
 if(location.hash==='#m2')from='E2';
-applyVB(); render(false);
+render(true);
 </script>
 </body>
 </html>
