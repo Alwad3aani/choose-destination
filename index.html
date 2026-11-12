@@ -45,6 +45,10 @@ h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.2;mar
 .stepper span{font-size:14px;color:var(--muted)}
 #guide li.cur{font-weight:600;color:var(--route)}
 #here{transition:transform .45s ease}
+#gps .a{fill:var(--line);opacity:.18}
+#gps .d{fill:var(--line);stroke:var(--surface);stroke-width:3}
+.track{position:absolute;bottom:10px;inset-inline-end:10px;font:inherit;font-size:13px;font-weight:600;color:var(--surface);background:var(--line);border:0;border-radius:8px;padding:8px 12px;cursor:pointer;max-width:60%}
+.track[hidden]{display:none}
 h2{font-size:15px;font-weight:600;color:var(--muted);margin:0 0 8px}
 .chooser{display:flex;flex-direction:column;gap:10px}
 .secs{display:flex;gap:6px;flex-wrap:wrap}
@@ -121,6 +125,7 @@ footer{color:var(--muted);font-size:12px;text-align:center}
   <div class="mapbox">
     <svg id="map" role="img" aria-label="مخطط المبنى"></svg>
     <span class="floor" id="badge"></span>
+    <button type="button" class="track" id="track" hidden>تتبّع موقعي على الخريطة</button>
     <div class="zoom">
       <button type="button" id="zin" aria-label="تكبير">+</button>
       <button type="button" id="zout" aria-label="تصغير">−</button>
@@ -136,7 +141,7 @@ footer{color:var(--muted);font-size:12px;text-align:center}
 
   <section id="guide" aria-live="polite"></section>
 
-  <footer>الإصدار ٠٫٣ · رابط لكل مدخل وخطوات متحركة</footer>
+  <footer>الإصدار ٠٫٤ · خريطة الموقع وتتبّع الموقع بين المباني</footer>
 </div>
 
 <script>
@@ -269,6 +274,18 @@ const MAPS={
    {id:'three',n:'ورشة تحكم المحركات ثلاثية الأوجه',l:['ورشة تحكم المحركات','ثلاثية الأوجه'],z:1,r:[980,103,182,322],d:[1071,427]},
    ...stripA(WC_TRAINER,WC_TRAINEE)]}
 };
+MAPS.site={name:'خريطة الموقع',floor:'',full:{x:440,y:262,w:570,h:490},bg:[440,262,570,490],nodes:{},edges:[],decor:[['poly','527,285 978,379 912,725 490,628 462,435']],rooms:[
+ {id:'elec',n:MAPS.elec.name,l:['قسم التقنية','الكهربائية'],r:[588,352,110,100],lc:[643,372],s:1},
+ {id:'g',n:MAPS.g.name,r:[705,378,115,127],lc:[762,394],s:1},
+ {id:'cars',n:MAPS.cars.name,l:['ورشة','السيارات'],r:[830,398,110,82],lc:[885,416],s:1},
+ {id:'weld',n:MAPS.weld.name,l:['قسم اللحام'],r:[568,468,114,78],lc:[625,482],s:1},
+ {id:'mech',n:MAPS.mech.name,l:['قسم التقنية','الميكانيكية'],r:[808,520,110,74],lc:[863,538],s:1},
+ {id:'x6',n:'المصلى والمسرح',l:['المصلى','والمسرح'],r:[703,545,74,66],s:1},
+ {id:'x7',n:'المستودع',r:[550,560,90,72],s:1},
+ {id:'x8',n:'الكافتيريا',r:[832,620,60,52],s:1}
+]};
+// where the site drawing sits on the earth: one reference point and its scale
+const GEO={lat:17.071367,lng:43.0466822,x:756,y:393.5,k:265600};
 const ORDER=['g','f1','cars','mech','weld','elec'];
 const secTitle=k=>MAPS[k].floor?MAPS[k].name+' · '+MAPS[k].floor:MAPS[k].name;
 const SHORT={g:'الإداري · الأرضي',f1:'الإداري · الأول',cars:'ورشة السيارات',mech:'التقنية الميكانيكية',weld:'اللحام',elec:'التقنية الكهربائية'};
@@ -284,7 +301,7 @@ for(const k of ORDER)for(const r of MAPS[k].rooms){
 
 const STARTS={m1:['g','E1','المبنى الإداري · المدخل الرئيسي ١'],m2:['g','E2','المبنى الإداري · المدخل الرئيسي ٢'],cars:['cars','E',MAPS.cars.name],mech:['mech','E',MAPS.mech.name],weld:['weld','E',MAPS.weld.name],elec:['elec','E',MAPS.elec.name]};
 let start='m1', from='E1', target=null, section='g', view='g', legs=[], legIdx=0, stepIdx=0, drawn=null, rot=false;
-let vb={...MAPS.g.full}, anim=0, plan, pathEl, pin, here, hereT;
+let vb={...MAPS.g.full}, anim=0, plan, pathEl, pin, here, hereT, gps, gpsA, gpsPos=null, watching=false;
 const $=id=>document.getElementById(id);
 const svg=$('map');
 function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
@@ -308,6 +325,7 @@ function drawMap(k){
   const later=[];
   for(const d of (M.base||[]).concat(M.decor||[])){
     if(d[0]==='stairs')stairs(d[1],d[2],d[3],d[4],d[5]);
+    else if(d[0]==='poly')el('polygon',{points:d[1],class:'floorbg wall'},plan);
     else if(d[0]==='gap')el('line',{x1:d[1],y1:d[2],x2:d[3],y2:d[4],class:'gap'},plan);
     else later.push(d);
   }
@@ -328,6 +346,7 @@ function drawMap(k){
   here=el('g',{id:'here'},plan);
   el('circle',{class:'p',r:22},here); el('circle',{class:'c',r:9},here);
   hereT=el('text',{class:'lbl',x:62,y:5,'data-cx':62,'data-cy':0},here);
+  gps=el('g',{id:'gps'},plan); gpsA=el('circle',{class:'a',r:0},gps); el('circle',{class:'d',r:7},gps);
 }
 
 /* ---------- routing ---------- */
@@ -351,6 +370,7 @@ function route(M,start,door,via){
 function turn(a,b,c){const x1=b[0]-a[0],y1=b[1]-a[1],x2=c[0]-b[0],y2=c[1]-b[1];const ang=Math.atan2(x1*y2-y1*x2,x1*x2+y1*y2)*180/Math.PI;return Math.abs(ang)<30?0:ang>0?1:-1;}
 const side=t=>t===0?'أمامك مباشرة':t>0?'على يمينك':'على يسارك';
 function steps(leg){
+  if(leg.site)return [{t:leg.first,p:0},{t:'وصلت إلى المبنى؟ اضغط «التالي» لعرض خريطته من الداخل.',p:1}];
   const pts=leg.pts, out=[{t:leg.first,p:0}], what=leg.stairs?'الدرج':'«'+leg.name+'»';
   for(let i=1;i<pts.length-1;i++){
     const t=turn(pts[i-1],pts[i],pts[i+1]);
@@ -365,12 +385,14 @@ function buildLegs(){
   legs=[]; if(!target)return;
   const M=MAPS[target.m], room=M.rooms.find(r=>r.id===target.id), door=room.d.slice(0,2);
   const sm=STARTS[start][0];
-  const enter=sm==='g'?'ادخل من '+(from==='E1'?'المدخل الرئيسي ١':'المدخل الرئيسي ٢')+' وامشِ للأمام.':'توجّه إلى المبنى الإداري وادخل من المدخل الرئيسي ١، ثم امشِ للأمام.';
+  const enter=sm==='g'?'ادخل من '+(from==='E1'?'المدخل الرئيسي ١':'المدخل الرئيسي ٢')+' وامشِ للأمام.':'ادخل من المدخل الرئيسي ١ وامشِ للأمام.';
+  const tb=target.m==='f1'?'g':target.m;
+  if(tb!==sm){const c=id=>{const r=MAPS.site.rooms.find(r=>r.id===id).r;return [r[0]+r[2]/2,r[1]+r[3]/2];};legs.push({m:'site',site:1,pts:[c(sm),c(tb)],first:'اخرج وتوجّه إلى '+MAPS[tb].name+'، وهو المبنى الملوّن في خريطة الموقع.'});}
   if(target.m==='g') legs.push({m:'g',pts:route(M,from,door,room.via),first:enter,name:target.n});
   else if(target.m==='f1'){
     legs.push({m:'g',pts:route(MAPS.g,from,STAIR_DOOR),first:enter,stairs:1});
     legs.push({m:'f1',pts:route(M,'S',door,room.via),first:'عند وصولك الدور الأول امشِ للأمام من الدرج.',name:target.n});
-  } else legs.push({m:target.m,pts:route(M,'E',door,room.via),first:target.m===sm?'ادخل من المدخل الرئيسي وامشِ للأمام.':'توجّه إلى '+M.name+' وادخل من المدخل الرئيسي، ثم امشِ للأمام.',name:target.n});
+  } else legs.push({m:target.m,pts:route(M,'E',door,room.via),first:'ادخل من المدخل الرئيسي وامشِ للأمام.',name:target.n});
   if(legIdx>=legs.length)legIdx=0;
 }
 
@@ -395,10 +417,10 @@ function render(fit){
   const leg=legs[legIdx], k=leg?leg.m:view, changed=drawn!==k;
   if(changed)drawMap(k);
   const M=MAPS[k];
-  rot=leg?leg.pts[1][1]>leg.pts[0][1]+1:(k==='g'&&from==='E2');
+  rot=k==='site'?false:leg?leg.pts[1][1]>leg.pts[0][1]+1:(k==='g'&&from==='E2');
   const c=centre();
   plan.setAttribute('transform',rot?`rotate(180 ${c[0]} ${c[1]})`:'');
-  const sm=STARTS[start][0], st=leg?steps(leg):[], atStart=k===sm&&legIdx===0;
+  const sm=STARTS[start][0], st=leg?steps(leg):[], atStart=(k===sm||k==='site')&&legIdx===0;
   const s=leg?(stepIdx>=st.length?leg.pts[leg.pts.length-1]:leg.pts[st[stepIdx].p]):atStart?M.nodes[STARTS[start][1]]:null;
   here.style.transform=s?`translate(${s[0]}px,${s[1]}px)`:'translate(-999px,-999px)';
   hereT.textContent=!atStart&&stepIdx===0?'البداية':'أنت هنا';
@@ -406,28 +428,29 @@ function render(fit){
   $('badge').textContent=secTitle(k);
   svg.setAttribute('aria-label','مخطط '+secTitle(k));
   $('start').value=start;
-  M.rooms.forEach(r=>r.el.classList.toggle('on',!!target&&target.m===k&&r.id===target.id));
+  M.rooms.forEach(r=>r.el.classList.toggle('on',!!target&&(k==='site'?r.id===(target.m==='f1'?'g':target.m):target.m===k&&r.id===target.id)));
   if(leg){
     pathEl.setAttribute('points',leg.pts.map(p=>p.join(',')).join(' '));
     const e=leg.pts[leg.pts.length-1]; pin.setAttribute('cx',e[0]); pin.setAttribute('cy',e[1]);
   } else {pathEl.setAttribute('points','');pin.setAttribute('cx',-999);}
   // leg switcher
   const lg=$('legs'); lg.hidden=legs.length<2; lg.textContent='';
-  legs.forEach((l,i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i?'٢ · ':'١ · ')+MAPS[l.m].floor;b.setAttribute('aria-pressed',i===legIdx);b.addEventListener('click',()=>{legIdx=i;stepIdx=0;render(true);});lg.appendChild(b);});
+  legs.forEach((l,i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i+1).toLocaleString('ar-EG')+' · '+(MAPS[l.m].floor||MAPS[l.m].name);b.setAttribute('aria-pressed',i===legIdx);b.addEventListener('click',()=>{legIdx=i;stepIdx=0;render(true);});lg.appendChild(b);});
   // written guide
   const g=$('guide'); g.textContent='';
   const add=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;g.appendChild(e);return e;};
   if(!target){add('h3','اختر وجهتك من القائمة');add('p','أو اضغط على أي غرفة في الخريطة، وسيظهر لك المسار إليها.');}
   else{
     add('h3',target.n); add('p',secTitle(target.m),'where');
-    legs.forEach((l,i)=>{if(legs.length>1)add('h4',(i?'٢ · ':'١ · ')+MAPS[l.m].floor);const ol=add('ol');steps(l).forEach((t,j)=>{const li=document.createElement('li');li.textContent=t.t;if(i===legIdx&&j===stepIdx)li.className='cur';ol.appendChild(li);});});
+    legs.forEach((l,i)=>{if(legs.length>1)add('h4',(i+1).toLocaleString('ar-EG')+' · '+(MAPS[l.m].floor||MAPS[l.m].name));const ol=add('ol');steps(l).forEach((t,j)=>{const li=document.createElement('li');li.textContent=t.t;if(i===legIdx&&j===stepIdx)li.className='cur';ol.appendChild(li);});});
     const done=legIdx===legs.length-1&&stepIdx>=st.length, all=legs.map(l=>steps(l).length);
     if(done)add('h4','وصلت إلى وجهتك.');
     $('count').textContent=done?'وصلت':'الخطوة '+(all.slice(0,legIdx).reduce((a,b)=>a+b,0)+stepIdx+1).toLocaleString('ar-EG')+' من '+all.reduce((a,b)=>a+b,0).toLocaleString('ar-EG');
     $('prev').disabled=legIdx===0&&stepIdx===0; $('next').disabled=done;
   }
   $('stepper').hidden=!target;
-  if(fit||changed){if(leg)fitPoints(leg.pts,changed);else flyTo(M.full,changed);}
+  if(fit||changed){if(leg&&k!=='site')fitPoints(leg.pts,changed);else flyTo(M.full,changed);}
+  $('track').hidden=k!=='site'; showGps();
   list();
 }
 function choose(p,scroll){target=p;legIdx=0;stepIdx=0;render(true);if(scroll)document.querySelector('.mapbox').scrollIntoView({behavior:'smooth',block:'nearest'});}
@@ -452,6 +475,24 @@ for(const k of ORDER){
   $('secs').appendChild(b);
 }
 $('q').addEventListener('input',list);
+{const b=document.createElement('button');b.type='button';b.textContent='خريطة الموقع';b.dataset.k='site';b.addEventListener('click',()=>{target=null;view='site';render(true);});$('secs').appendChild(b);}
+
+/* ---------- live position between buildings (outdoors only) ---------- */
+function showGps(){
+  if(drawn!=='site'||!gps)return;
+  if(!gpsPos){gps.setAttribute('transform','translate(-999 -999)');return;}
+  const x=GEO.x+(gpsPos.lng-GEO.lng)*GEO.k*Math.cos(GEO.lat*Math.PI/180), y=GEO.y-(gpsPos.lat-GEO.lat)*GEO.k, f=MAPS.site.full;
+  const inside=x>f.x&&x<f.x+f.w&&y>f.y&&y<f.y+f.h;
+  gps.setAttribute('transform',inside?'translate('+x+' '+y+')':'translate(-999 -999)');
+  gpsA.setAttribute('r',Math.min(120,gpsPos.acc/0.4153));
+  $('track').textContent=inside?'موقعك ظاهر على الخريطة':'أنت خارج حدود الكلية';
+}
+$('track').addEventListener('click',()=>{
+  if(watching)return;
+  if(!navigator.geolocation){$('track').textContent='المتصفح لا يدعم تحديد الموقع';return;}
+  watching=true; $('track').textContent='جارٍ تحديد موقعك…';
+  navigator.geolocation.watchPosition(p=>{gpsPos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};showGps();},()=>{watching=false;$('track').textContent='تعذّر تحديد الموقع. اسمح للمتصفح ثم اضغط هنا';},{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
+});
 
 /* ---------- pan / zoom ---------- */
 const scale=()=>{const r=svg.getBoundingClientRect();return Math.max(vb.w/r.width,vb.h/r.height);};
