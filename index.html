@@ -59,6 +59,10 @@ h2{font-size:15px;font-weight:600;color:var(--muted);margin:0 0 8px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:236px;overflow-y:auto;padding:2px}
 .dest{font:inherit;font-weight:500;text-align:right;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:48px;justify-content:center;line-height:1.4}
 .dest small{font-weight:400;font-size:12px;color:var(--muted)}
+.dest.x{border-color:var(--alert);color:var(--alert)}
+.legend{margin:0;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.lx{width:18px;height:10px;background:var(--alert);border-radius:2px}
+.la{width:12px;height:12px;border-radius:50%;background:#1e9e4a;margin-inline-start:10px}
 .dest[aria-pressed="true"]{background:var(--route);border-color:var(--route);color:#fff}
 .dest[aria-pressed="true"] small{color:#fff}
 .none{color:var(--muted);margin:0}
@@ -92,7 +96,12 @@ footer{color:var(--muted);font-size:12px;text-align:center}
 .lbl.s{font-size:10px}
 .lbl.ent{fill:var(--line);font-weight:600;font-size:15px}
 .lbl.note{fill:var(--muted);font-size:11px}
-.lbl.exit{fill:var(--alert);font-size:11px;font-weight:600}
+.lbl.exit{fill:var(--alert);font-size:13px;font-weight:700}
+.room.exitb{fill:var(--alert);stroke:var(--alert)}
+.room.exitb.on{fill:var(--alert);stroke:var(--route)}
+.arrow{fill:#fff;pointer-events:none}
+.asm{fill:#1e9e4a;stroke:#fff;stroke-width:2}
+.lbl.asmt{fill:#fff;font-size:10px;font-weight:700}
 #path{fill:none;stroke:var(--route);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:14 12;animation:march 1s linear infinite}
 @keyframes march{to{stroke-dashoffset:-26}}
 #here circle.p{fill:var(--route);opacity:.3;transform-box:fill-box;transform-origin:center;animation:pulse 1.6s ease-out infinite}
@@ -133,6 +142,8 @@ footer{color:var(--muted);font-size:12px;text-align:center}
     </div>
   </div>
 
+  <p class="legend"><span class="lx"></span>مخرج الطوارئ<span class="la"></span>نقطة تجمع</p>
+
   <div class="stepper" id="stepper" hidden>
     <button type="button" id="prev">السابق</button>
     <span id="count"></span>
@@ -141,7 +152,7 @@ footer{color:var(--muted);font-size:12px;text-align:center}
 
   <section id="guide" aria-live="polite"></section>
 
-  <footer>الإصدار ٠٫٤ · خريطة الموقع وتتبّع الموقع بين المباني</footer>
+  <footer>الإصدار ٠٫٥ · مخارج الطوارئ ونقاط التجمع</footer>
 </div>
 
 <script>
@@ -152,6 +163,8 @@ const WC_TRAINER='دورة مياه المدربين', WC_TRAINEE='دورة مي
    z: open work area inside a hall (no walls) · s: small label · lc: label centre */
 // workshop buildings share two mirrored office strips
 function stripA(wcLeft,wcRight){return [
+ {id:'exl',n:'مخرج الطوارئ الأيسر',x:1,l:[],r:[92,529,60,22],d:[89,540,'v']},
+ {id:'exr',n:'مخرج الطوارئ الأيمن',x:1,l:[],r:[1319,529,60,22],d:[1382,540,'v']},
  {id:'el',n:'غرفة الكهرباء',r:[89,578,155,68],d:[244,612,'v'],via:[282,560]},
  {id:'st',n:'مستودع القسم',r:[89,646,231,114],d:[285,646,'h'],via:[282,560]},
  {id:'m3',n:'معمل ٣',r:[320,578,182,182],d:[362,578,'h']},
@@ -163,6 +176,8 @@ function stripA(wcLeft,wcRight){return [
  {id:'cf',n:'كافتيريا المدربين',r:[1192,578,98,92],d:[1242,578,'h'],s:1}
 ];}
 function stripB(){return [
+ {id:'exl',n:'مخرج الطوارئ الأيسر',x:1,l:[],r:[116,537,60,22],d:[113,548,'v']},
+ {id:'exr',n:'مخرج الطوارئ الأيمن',x:1,l:[],r:[1303,537,60,22],d:[1366,548,'v']},
  {id:'w1',n:WC_TRAINER,r:[113,585,135,183],d:[155,585,'h'],lc:[180,720],s:1},
  {id:'w2',n:WC_TRAINEE,r:[248,585,136,183],d:[345,585,'h'],lc:[316,720],s:1},
  {id:'cf',n:'كافتيريا المدربين',r:[201,585,96,95],d:[250,585,'h'],s:1},
@@ -173,21 +188,22 @@ function stripB(){return [
  {id:'el',n:'غرفة الكهرباء',r:[1215,585,151,70],d:[1215,612,'v'],via:[1178,565]},
  {id:'st',n:'مستودع القسم',r:[1142,655,224,113],d:[1178,655,'h'],via:[1178,565]}
 ];}
-const SHOP_A={full:{x:55,y:28,w:1360,h:790},bg:[89,58,1293,702],wall:1,
+const SHOP_A={full:{x:25,y:28,w:1420,h:790},bg:[89,58,1293,702],wall:1,
   nodes:{E:[738,750],A:[738,540],W:[110,540],X:[1360,540]},edges:[['E','A'],['A','W'],['A','X']],
-  base:[['gap',678,760,798,760],['label',['المدخل الرئيسي'],738,785,'ent'],['label',['مخرج الطوارئ'],160,515,'exit'],['label',['مخرج الطوارئ'],1310,515,'exit']]};
-const SHOP_B={full:{x:80,y:32,w:1320,h:794},bg:[113,62,1253,706],wall:1,
+  base:[['gap',678,760,798,760],['label',['المدخل الرئيسي'],738,785,'ent'],['label',['مخرج الطوارئ'],160,515,'exit'],['label',['مخرج الطوارئ'],1310,515,'exit'],['arrow',122,540,'l'],['arrow',1349,540,'r']]};
+const SHOP_B={full:{x:45,y:32,w:1390,h:794},bg:[113,62,1253,706],wall:1,
   nodes:{E:[738,758],A:[738,548],W:[135,548],X:[1345,548]},edges:[['E','A'],['A','W'],['A','X']],
-  base:[['gap',679,768,795,768],['label',['المدخل الرئيسي'],738,793,'ent'],['label',['مخرج الطوارئ'],185,522,'exit'],['label',['مخرج الطوارئ'],1295,522,'exit']]};
+  base:[['gap',679,768,795,768],['label',['المدخل الرئيسي'],738,793,'ent'],['label',['مخرج الطوارئ'],185,522,'exit'],['label',['مخرج الطوارئ'],1295,522,'exit'],['arrow',146,548,'l'],['arrow',1333,548,'r']]};
 
 const MAPS={
- g:{name:'المبنى الإداري',floor:'الدور الأرضي',full:{x:206,y:56,w:1144,h:736},bg:[236,102,1084,643],
-  nodes:{E1:[780,738],L:[780,622],BL:[485,622],BR:[1074,622],TL:[485,199],TR:[1074,199],T:[780,199],E2:[780,110],W:[432,199],S:[780,532]},
-  edges:[['E1','L'],['L','BL'],['L','BR'],['BL','TL'],['BR','TR'],['TL','T'],['T','TR'],['T','E2'],['TL','W'],['L','S']],
+ g:{name:'المبنى الإداري',floor:'الدور الأرضي',full:{x:166,y:56,w:1224,h:736},bg:[236,102,1084,643],
+  nodes:{E1:[780,738],L:[780,622],BL:[485,622],BR:[1074,622],TL:[485,199],TR:[1074,199],T:[780,199],E2:[780,110],W:[432,199],S:[780,532],X:[1300,205]},
+  edges:[['E1','L'],['L','BL'],['L','BR'],['BL','TL'],['BR','TR'],['TL','T'],['T','TR'],['T','E2'],['TL','W'],['L','S'],['TR','X']],
   decor:[['stairs',236,170,184,50,1],['stairs',1113,150,207,70,1],['stairs',617,303,325,207,0],['box',735,390,90,44],
-   ['label',['الدرج'],780,412],['label',['الدرج'],328,195,'s'],['label',['الدرج'],1216,185,'s'],['label',['مخرج الطوارئ'],1250,212,'exit'],
+   ['label',['الدرج'],780,412],['label',['الدرج'],328,195,'s'],['label',['الدرج'],1216,185,'s'],['box',1118,191,134,28],['label',['مخرج الطوارئ'],1185,206,'exit'],['arrow',1286,205,'r'],['asm',196,423],['asm',1360,423],
    ['label',['المدخل الرئيسي ١'],780,770,'ent'],['label',['المدخل الرئيسي ٢'],780,84,'ent']],
   rooms:[
+   {id:'ex',n:'مخرج الطوارئ',x:1,l:[],r:[1255,193,62,24],d:[1320,205,'v']},
    {id:'it',n:'تقنية المعلومات',r:[236,102,210,68],d:[432,170,'h']},
    {id:'data',n:'غرفة البيانات',r:[446,102,78,68],s:1},
    {id:'vt',n:'وكيل شؤون المتدربين',l:['وكيل شؤون','المتدربين'],r:[524,102,91,68],d:[590,170,'h'],s:1},
@@ -212,12 +228,13 @@ const MAPS={
    {id:'tr',n:'مكاتب المدربين – قسم الدراسات العامة',l:['مكاتب المدربين','قسم الدراسات العامة'],r:[1113,590,207,155],d:[1113,614,'v']},
    {id:'vtr',n:'وكيل شؤون المدربين',r:[942,650,171,95],d:[1090,650,'h']}
   ]},
- f1:{name:'المبنى الإداري',floor:'الدور الأول',full:{x:140,y:25,w:1220,h:765},bg:[173,55,1154,705],wall:1,
-  nodes:{S:[750,560],L:[750,624],BL:[435,624],BR:[1063,624],TL:[435,162],TR:[1063,162],Bw:[405,624],Be:[1090,624]},
-  edges:[['S','L'],['L','BL'],['L','BR'],['BL','TL'],['BR','TR'],['TL','TR'],['BL','Bw'],['BR','Be']],
+ f1:{name:'المبنى الإداري',floor:'الدور الأول',full:{x:100,y:25,w:1300,h:765},bg:[173,55,1154,705],wall:1,
+  nodes:{S:[750,560],L:[750,624],BL:[435,624],BR:[1063,624],TL:[435,162],TR:[1063,162],Bw:[405,624],Be:[1090,624],X:[1305,172]},
+  edges:[['S','L'],['L','BL'],['L','BR'],['BL','TL'],['BR','TR'],['TL','TR'],['BL','Bw'],['BR','Be'],['TR','X']],
   decor:[['stairs',178,118,185,50,1],['stairs',1105,108,215,52,1],['stairs',607,305,290,240,0],['box',708,400,84,40],
-   ['label',['الدرج'],750,425],['label',['الدرج'],270,172,'s'],['label',['الدرج'],1212,165,'s'],['label',['مخرج الطوارئ'],1255,178,'exit']],
+   ['label',['الدرج'],750,425],['label',['الدرج'],270,172,'s'],['label',['الدرج'],1212,138,'s'],['label',['مخرج الطوارئ'],1200,177,'exit'],['arrow',1292,172,'r'],['asm',132,407],['asm',1368,407]],
   rooms:[
+   {id:'ex',n:'مخرج الطوارئ',x:1,l:[],r:[1262,161,60,22],d:[1327,172,'v']},
    {id:'cst',n:'مستودع قسم الحاسب الآلي',r:[173,55,304,52],d:[435,107,'h']},
    {id:'l7',n:'معمل ٧',r:[477,55,307,75],d:[760,130,'h']},
    {id:'l6',n:'معمل ٦',r:[784,55,235,75],d:[980,130,'h']},
@@ -245,10 +262,10 @@ const MAPS={
    {id:'meet',n:'قاعة الاجتماعات',l:['قاعة','الاجتماعات'],r:[922,441,100,151],d:[1000,592,'h']}
   ]},
  cars:{name:'مبنى قسم ورشة السيارات',floor:'',...SHOP_A,
-  decor:[['label',['مدخل السيارات'],276,90,'note'],['label',['باب بمحرك كهربائي ٣'],523,90,'note'],['label',['باب بمحرك كهربائي ٢'],737,90,'note'],['label',['باب بمحرك كهربائي ١'],977,90,'note'],['label',['مدخل السيارات'],1243,90,'note']],
+  decor:[['label',['مدخل السيارات'],276,90,'note'],['label',['باب بمحرك كهربائي ٣'],523,90,'note'],['label',['باب بمحرك كهربائي ٢'],737,90,'note'],['label',['باب بمحرك كهربائي ١'],977,90,'note'],['label',['مدخل السيارات'],1243,90,'note'],['asm',1412,80],['asm',57,300]],
   rooms:[{id:'lab',n:'معمل تدريبي',z:1,r:[430,150,198,240],d:[529,392]},...stripA(WC_TRAINEE,WC_TRAINER)]},
  mech:{name:'مبنى قسم التقنية الميكانيكية',floor:'',...SHOP_B,
-  decor:[['label',['مدخل السيارات'],478,94,'note'],['label',['مدخل السيارات'],967,94,'note']],
+  decor:[['label',['مدخل السيارات'],478,94,'note'],['label',['مدخل السيارات'],967,94,'note'],['asm',79,412],['asm',1400,412]],
   rooms:[
    {id:'ac',n:'ورشة صيانة أنظمة التبريد وتكييف الهواء',also:['ورشة تكييف الهواء'],l:['١- ورشة صيانة أنظمة التبريد','وتكييف الهواء','٢- ورشة تكييف الهواء'],z:1,r:[140,100,275,330],d:[290,432]},
    {id:'com',n:'ورشة التبريد التجاري',z:1,r:[585,120,290,365],d:[730,487]},
@@ -256,7 +273,7 @@ const MAPS={
    {id:'free',n:'مساحة عمل حر',z:1,r:[1078,62,288,132],d:[1345,196]},
    ...stripB()]},
  weld:{name:'مبنى قسم اللحام',floor:'',...SHOP_B,
-  decor:[['label',['باب بمحرك كهربائي ٢'],407,94,'note'],['label',['باب بمحرك كهربائي ١'],1020,94,'note']],
+  decor:[['label',['باب بمحرك كهربائي ٢'],407,94,'note'],['label',['باب بمحرك كهربائي ١'],1020,94,'note'],['asm',79,795],['asm',1400,795]],
   rooms:[
    {id:'dev',n:'منطقة عمل أجهزة',l:['منطقة','عمل أجهزة'],z:1,r:[121,65,105,368],d:[173,435]},
    {id:'basic',n:'ورشة تدريب أساسي',z:1,r:[265,160,270,275],d:[378,437]},
@@ -265,7 +282,7 @@ const MAPS={
    {id:'gas',n:'غرف اللحام الغازي',l:['غرف','اللحام الغازي'],z:1,r:[1195,155,125,280],d:[1257,437]},
    ...stripB()]},
  elec:{name:'مبنى قسم التقنية الكهربائية',floor:'',...SHOP_A,
-  decor:[['label',['باب بمحرك كهربائي ٣'],272,90,'note'],['label',['مدخل السيارات'],520,90,'note'],['label',['باب بمحرك كهربائي ٢'],735,90,'note'],['label',['باب بمحرك كهربائي ١'],975,90,'note'],['label',['مدخل السيارات'],1243,90,'note']],
+  decor:[['label',['باب بمحرك كهربائي ٣'],272,90,'note'],['label',['مدخل السيارات'],520,90,'note'],['label',['باب بمحرك كهربائي ٢'],735,90,'note'],['label',['باب بمحرك كهربائي ١'],975,90,'note'],['label',['مدخل السيارات'],1243,90,'note'],['asm',57,70],['asm',1412,330]],
   rooms:[
    {id:'free',n:'منطقة عمل حر',z:1,r:[89,58,167,100],d:[170,160],s:1},
    {id:'ind',n:'ورشة لف وصيانة المحركات الحثية',l:['ورشة لف وصيانة','المحركات الحثية'],z:1,r:[250,165,205,260],d:[352,427]},
@@ -308,7 +325,7 @@ function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const
 
 /* ---------- draw a plan ---------- */
 function label(lines,cx,cy,cls,parent){
-  const t=el('text',{class:'lbl '+(cls||''),'data-cx':cx,'data-cy':cy},parent||plan), lh=cls==='s'?12:18;
+  const t=el('text',{class:'lbl '+(cls||''),'data-cx':cx,'data-cy':cy},parent||plan), lh=cls==='s'||cls==='asmt'?12:18;
   lines.forEach((s,i)=>{const ts=el('tspan',{x:cx,y:cy-(lines.length-1)*lh/2+i*lh+(cls==='s'?3:5)},t);ts.textContent=s;});
   return t;
 }
@@ -332,13 +349,15 @@ function drawMap(k){
   for(const r of M.rooms){
     const [x,y,w,h]=r.r;
     const shape=r.poly?el('polygon',{points:r.poly},plan):el('rect',{x,y,width:w,height:h},plan);
-    shape.setAttribute('class',(r.z?'zone':'room')+(r.d?' pick':''));
+    shape.setAttribute('class',(r.z?'zone':'room')+(r.x?' exitb':'')+(r.d?' pick':''));
     shape.dataset.id=r.id; r.el=shape;
     if(r.d&&r.d[2]){const [dx,dy,o]=r.d; el('line',o==='h'?{x1:dx-11,y1:dy,x2:dx+11,y2:dy,class:'gap'}:{x1:dx,y1:dy-11,x2:dx,y2:dy+11,class:'gap'},plan);}
   }
   for(const r of M.rooms){const c=r.lc||[r.r[0]+r.r[2]/2,r.r[1]+r.r[3]/2];label(r.l||[r.n],c[0],c[1],r.s?'s':'');}
   for(const d of later){
     if(d[0]==='box')el('rect',{x:d[1],y:d[2],width:d[3],height:d[4],rx:6,class:'floorbg'},plan);
+    else if(d[0]==='arrow'){const x=d[1],y=d[2],k=d[3]==='r'?1:-1;el('polygon',{points:[[-16,-3],[4,-3],[4,-8],[16,0],[4,8],[4,3],[-16,3]].map(p=>(x+k*p[0])+','+(y+p[1])).join(' '),class:'arrow'},plan);}
+    else if(d[0]==='asm'){el('circle',{cx:d[1],cy:d[2],r:24,class:'asm'},plan);label(['نقطة','تجمع'],d[1],d[2]-1,'asmt');}
     else label(d[1],d[2],d[3],d[4]);
   }
   pathEl=el('polyline',{id:'path',points:''},plan);
@@ -458,11 +477,12 @@ function choose(p,scroll){target=p;legIdx=0;stepIdx=0;render(true);if(scroll)doc
 /* ---------- menus ---------- */
 function list(){
   const q=$('q').value.trim(), box=$('list'); box.textContent='';
-  const items=q?PLACES.filter(p=>p.n.includes(q)):PLACES.filter(p=>p.m===section);
+  const isX=p=>p.n.indexOf('مخرج الطوارئ')===0;
+  const items=(q?PLACES.filter(p=>p.n.includes(q)):PLACES.filter(p=>p.m===section)).sort((a,b)=>isX(b)-isX(a));
   document.querySelectorAll('#secs button').forEach(b=>b.setAttribute('aria-pressed',!q&&b.dataset.k===section));
   if(!items.length){const p=document.createElement('p');p.className='none';p.textContent='لا توجد وجهة بهذا الاسم. جرّب كلمة أخرى أو اختر المبنى من الأعلى.';box.appendChild(p);return;}
   for(const p of items){
-    const b=document.createElement('button');b.type='button';b.className='dest';b.textContent=p.n;
+    const b=document.createElement('button');b.type='button';b.className=isX(p)?'dest x':'dest';b.textContent=p.n;
     if(q){const s=document.createElement('small');s.textContent=secTitle(p.m);b.appendChild(s);}
     b.setAttribute('aria-pressed',!!target&&target.m===p.m&&target.id===p.id&&target.n===p.n);
     b.addEventListener('click',()=>choose(p,true));
