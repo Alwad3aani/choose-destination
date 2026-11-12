@@ -36,6 +36,15 @@ h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.2;mar
 .seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:6px 12px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--line);color:var(--surface);font-weight:600}
+.startbox{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+#start{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;max-width:100%}
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.stepper[hidden]{display:none}
+.stepper button{font:inherit;font-weight:600;color:var(--surface);background:var(--line);border:0;border-radius:8px;padding:10px 18px;min-width:96px;cursor:pointer}
+.stepper button:disabled{opacity:.4;cursor:default}
+.stepper span{font-size:14px;color:var(--muted)}
+#guide li.cur{font-weight:600;color:var(--route)}
+#here{transition:transform .45s ease}
 h2{font-size:15px;font-weight:600;color:var(--muted);margin:0 0 8px}
 .chooser{display:flex;flex-direction:column;gap:10px}
 .secs{display:flex;gap:6px;flex-wrap:wrap}
@@ -87,7 +96,7 @@ footer{color:var(--muted);font-size:12px;text-align:center}
 #here circle.c{fill:var(--route);stroke:var(--surface);stroke-width:3}
 #here text{fill:var(--route);font-weight:600;font-size:14px}
 #pin{fill:var(--route);stroke:var(--surface);stroke-width:2}
-@media (prefers-reduced-motion:reduce){#path,#here circle.p{animation:none}}
+@media (prefers-reduced-motion:reduce){#path,#here circle.p{animation:none}#here{transition:none}}
 </style>
 </head>
 <body>
@@ -97,10 +106,7 @@ footer{color:var(--muted);font-size:12px;text-align:center}
       <h1>اختر وجهتك</h1>
       <p class="college">الكلية التقنية بالعارضة</p>
     </div>
-    <div class="seg" role="group" aria-label="موقعك الآن">
-      <button type="button" id="from1" aria-pressed="true">المدخل الرئيسي ١</button>
-      <button type="button" id="from2" aria-pressed="false">المدخل الرئيسي ٢</button>
-    </div>
+    <label class="startbox">موقعك الآن<select id="start"></select></label>
   </header>
 
   <section class="chooser">
@@ -122,9 +128,15 @@ footer{color:var(--muted);font-size:12px;text-align:center}
     </div>
   </div>
 
+  <div class="stepper" id="stepper" hidden>
+    <button type="button" id="prev">السابق</button>
+    <span id="count"></span>
+    <button type="button" id="next">التالي</button>
+  </div>
+
   <section id="guide" aria-live="polite"></section>
 
-  <footer>الإصدار ٠٫٢ · المبنى الإداري بدوريه ومباني الأقسام الأربعة</footer>
+  <footer>الإصدار ٠٫٣ · رابط لكل مدخل وخطوات متحركة</footer>
 </div>
 
 <script>
@@ -270,7 +282,8 @@ for(const k of ORDER)for(const r of MAPS[k].rooms){
   (r.also||[]).forEach(n=>PLACES.push({m:k,id:r.id,n}));
 }
 
-let from='E1', target=null, section='g', view='g', legs=[], legIdx=0, drawn=null, rot=false;
+const STARTS={m1:['g','E1','المبنى الإداري · المدخل الرئيسي ١'],m2:['g','E2','المبنى الإداري · المدخل الرئيسي ٢'],cars:['cars','E',MAPS.cars.name],mech:['mech','E',MAPS.mech.name],weld:['weld','E',MAPS.weld.name],elec:['elec','E',MAPS.elec.name]};
+let start='m1', from='E1', target=null, section='g', view='g', legs=[], legIdx=0, stepIdx=0, drawn=null, rot=false;
 let vb={...MAPS.g.full}, anim=0, plan, pathEl, pin, here, hereT;
 const $=id=>document.getElementById(id);
 const svg=$('map');
@@ -338,25 +351,26 @@ function route(M,start,door,via){
 function turn(a,b,c){const x1=b[0]-a[0],y1=b[1]-a[1],x2=c[0]-b[0],y2=c[1]-b[1];const ang=Math.atan2(x1*y2-y1*x2,x1*x2+y1*y2)*180/Math.PI;return Math.abs(ang)<30?0:ang>0?1:-1;}
 const side=t=>t===0?'أمامك مباشرة':t>0?'على يمينك':'على يسارك';
 function steps(leg){
-  const pts=leg.pts, out=[leg.first], what=leg.stairs?'الدرج':'«'+leg.name+'»';
+  const pts=leg.pts, out=[{t:leg.first,p:0}], what=leg.stairs?'الدرج':'«'+leg.name+'»';
   for(let i=1;i<pts.length-1;i++){
     const t=turn(pts[i-1],pts[i],pts[i+1]);
-    if(i===pts.length-2) out.push(what+' '+side(t)+'.');
-    else if(t!==0) out.push('انعطف '+(t>0?'يميناً':'يساراً')+' واستمر في الممر.');
+    if(i===pts.length-2) out.push({t:what+' '+side(t)+'.',p:i});
+    else if(t!==0) out.push({t:'انعطف '+(t>0?'يميناً':'يساراً')+' واستمر في الممر.',p:i});
   }
-  if(pts.length===2) out.push(what+' أمامك مباشرة.');
-  if(leg.stairs) out.push('اصعد الدرج إلى الدور الأول.');
+  if(pts.length===2) out.push({t:what+' أمامك مباشرة.',p:0});
+  if(leg.stairs) out.push({t:'اصعد الدرج إلى الدور الأول.',p:pts.length-1});
   return out;
 }
 function buildLegs(){
   legs=[]; if(!target)return;
   const M=MAPS[target.m], room=M.rooms.find(r=>r.id===target.id), door=room.d.slice(0,2);
-  const enter='ادخل من '+(from==='E1'?'المدخل الرئيسي ١':'المدخل الرئيسي ٢')+' وامشِ للأمام.';
+  const sm=STARTS[start][0];
+  const enter=sm==='g'?'ادخل من '+(from==='E1'?'المدخل الرئيسي ١':'المدخل الرئيسي ٢')+' وامشِ للأمام.':'توجّه إلى المبنى الإداري وادخل من المدخل الرئيسي ١، ثم امشِ للأمام.';
   if(target.m==='g') legs.push({m:'g',pts:route(M,from,door,room.via),first:enter,name:target.n});
   else if(target.m==='f1'){
     legs.push({m:'g',pts:route(MAPS.g,from,STAIR_DOOR),first:enter,stairs:1});
     legs.push({m:'f1',pts:route(M,'S',door,room.via),first:'عند وصولك الدور الأول امشِ للأمام من الدرج.',name:target.n});
-  } else legs.push({m:target.m,pts:route(M,'E',door,room.via),first:'توجّه إلى '+M.name+' وادخل من المدخل الرئيسي، ثم امشِ للأمام.',name:target.n});
+  } else legs.push({m:target.m,pts:route(M,'E',door,room.via),first:target.m===sm?'ادخل من المدخل الرئيسي وامشِ للأمام.':'توجّه إلى '+M.name+' وادخل من المدخل الرئيسي، ثم امشِ للأمام.',name:target.n});
   if(legIdx>=legs.length)legIdx=0;
 }
 
@@ -384,13 +398,14 @@ function render(fit){
   rot=leg?leg.pts[1][1]>leg.pts[0][1]+1:(k==='g'&&from==='E2');
   const c=centre();
   plan.setAttribute('transform',rot?`rotate(180 ${c[0]} ${c[1]})`:'');
-  const s=leg?leg.pts[0]:k==='g'?M.nodes[from]:null;
-  here.setAttribute('transform',s?`translate(${s[0]} ${s[1]})`:'translate(-999 -999)');
-  hereT.textContent=k==='g'?'أنت هنا':'البداية';
+  const sm=STARTS[start][0], st=leg?steps(leg):[], atStart=k===sm&&legIdx===0;
+  const s=leg?(stepIdx>=st.length?leg.pts[leg.pts.length-1]:leg.pts[st[stepIdx].p]):atStart?M.nodes[STARTS[start][1]]:null;
+  here.style.transform=s?`translate(${s[0]}px,${s[1]}px)`:'translate(-999px,-999px)';
+  hereT.textContent=!atStart&&stepIdx===0?'البداية':'أنت هنا';
   plan.querySelectorAll('text').forEach(t=>t.setAttribute('transform',rot?`rotate(180 ${t.dataset.cx} ${t.dataset.cy})`:''));
   $('badge').textContent=secTitle(k);
   svg.setAttribute('aria-label','مخطط '+secTitle(k));
-  $('from1').setAttribute('aria-pressed',from==='E1'); $('from2').setAttribute('aria-pressed',from==='E2');
+  $('start').value=start;
   M.rooms.forEach(r=>r.el.classList.toggle('on',!!target&&target.m===k&&r.id===target.id));
   if(leg){
     pathEl.setAttribute('points',leg.pts.map(p=>p.join(',')).join(' '));
@@ -398,19 +413,24 @@ function render(fit){
   } else {pathEl.setAttribute('points','');pin.setAttribute('cx',-999);}
   // leg switcher
   const lg=$('legs'); lg.hidden=legs.length<2; lg.textContent='';
-  legs.forEach((l,i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i?'٢ · ':'١ · ')+MAPS[l.m].floor;b.setAttribute('aria-pressed',i===legIdx);b.addEventListener('click',()=>{legIdx=i;render(true);});lg.appendChild(b);});
+  legs.forEach((l,i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i?'٢ · ':'١ · ')+MAPS[l.m].floor;b.setAttribute('aria-pressed',i===legIdx);b.addEventListener('click',()=>{legIdx=i;stepIdx=0;render(true);});lg.appendChild(b);});
   // written guide
   const g=$('guide'); g.textContent='';
   const add=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;g.appendChild(e);return e;};
   if(!target){add('h3','اختر وجهتك من القائمة');add('p','أو اضغط على أي غرفة في الخريطة، وسيظهر لك المسار إليها.');}
   else{
     add('h3',target.n); add('p',secTitle(target.m),'where');
-    legs.forEach((l,i)=>{if(legs.length>1)add('h4',(i?'٢ · ':'١ · ')+MAPS[l.m].floor);const ol=add('ol');steps(l).forEach(t=>{const li=document.createElement('li');li.textContent=t;ol.appendChild(li);});});
+    legs.forEach((l,i)=>{if(legs.length>1)add('h4',(i?'٢ · ':'١ · ')+MAPS[l.m].floor);const ol=add('ol');steps(l).forEach((t,j)=>{const li=document.createElement('li');li.textContent=t.t;if(i===legIdx&&j===stepIdx)li.className='cur';ol.appendChild(li);});});
+    const done=legIdx===legs.length-1&&stepIdx>=st.length, all=legs.map(l=>steps(l).length);
+    if(done)add('h4','وصلت إلى وجهتك.');
+    $('count').textContent=done?'وصلت':'الخطوة '+(all.slice(0,legIdx).reduce((a,b)=>a+b,0)+stepIdx+1).toLocaleString('ar-EG')+' من '+all.reduce((a,b)=>a+b,0).toLocaleString('ar-EG');
+    $('prev').disabled=legIdx===0&&stepIdx===0; $('next').disabled=done;
   }
+  $('stepper').hidden=!target;
   if(fit||changed){if(leg)fitPoints(leg.pts,changed);else flyTo(M.full,changed);}
   list();
 }
-function choose(p,scroll){target=p;legIdx=0;render(true);if(scroll)document.querySelector('.mapbox').scrollIntoView({behavior:'smooth',block:'nearest'});}
+function choose(p,scroll){target=p;legIdx=0;stepIdx=0;render(true);if(scroll)document.querySelector('.mapbox').scrollIntoView({behavior:'smooth',block:'nearest'});}
 
 /* ---------- menus ---------- */
 function list(){
@@ -468,11 +488,18 @@ $('zin').addEventListener('click',()=>zoomAt(0.75)); $('zout').addEventListener(
 $('zfit').addEventListener('click',()=>flyTo(MAPS[drawn].full));
 
 /* ---------- entrance: each barcode can open its own entrance with #m1 or #m2 ---------- */
-function setFrom(k,write){from=k;if(write){try{history.replaceState(null,'',k==='E2'?'#m2':'#m1');}catch(_){}}render(true);}
-$('from1').addEventListener('click',()=>setFrom('E1',true)); $('from2').addEventListener('click',()=>setFrom('E2',true));
-addEventListener('hashchange',()=>setFrom(location.hash==='#m2'?'E2':'E1',false));
-if(location.hash==='#m2')from='E2';
-render(true);
+$('next').addEventListener('click',()=>{const n=steps(legs[legIdx]).length;if(stepIdx<n-1)stepIdx++;else if(legIdx<legs.length-1){legIdx++;stepIdx=0;}else stepIdx=n;render(false);});
+$('prev').addEventListener('click',()=>{if(stepIdx>0)stepIdx--;else if(legIdx>0){legIdx--;stepIdx=steps(legs[legIdx]).length-1;}render(false);});
+for(const k in STARTS){const o=document.createElement('option');o.value=k;o.textContent=STARTS[k][2];$('start').appendChild(o);}
+function setStart(k,write){
+  if(!STARTS[k])k='m1';
+  start=k; from=STARTS[k][0]==='g'?STARTS[k][1]:'E1'; section=view=STARTS[k][0]; legIdx=0; stepIdx=0;
+  if(write){try{history.replaceState(null,'','#'+k);}catch(_){}}
+  render(true);
+}
+$('start').addEventListener('change',e=>setStart(e.target.value,true));
+addEventListener('hashchange',()=>setStart(location.hash.slice(1),false));
+setStart(location.hash.slice(1),false);
 </script>
 </body>
 </html>
